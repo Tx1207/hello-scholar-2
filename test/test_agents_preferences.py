@@ -29,6 +29,18 @@ class AgentPreferenceTests(unittest.TestCase):
         self.assertIn("命令", chinese)
         self.assertIn("Skill 写入文档默认使用中文正文", chinese)
 
+    def test_chinese_docs_are_source_for_paired_document_sync(self) -> None:
+        english = AGENTS_MD.read_text(encoding="utf-8")
+        chinese = AGENTS_ZH.read_text(encoding="utf-8")
+
+        self.assertIn("Chinese version as the user-edited source", english)
+        self.assertIn("sync the English version", english)
+        self.assertIn("semantic consistency before committing", english)
+
+        self.assertIn("中文版本作为用户编辑的事实源", chinese)
+        self.assertIn("必须同步英文版本", chinese)
+        self.assertIn("提交前检查中英文语义一致", chinese)
+
 
 if __name__ == "__main__":
     unittest.main()

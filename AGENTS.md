@@ -136,3 +136,4 @@ Statuses: `💡直接响应`, `⚡快速执行`, `🔵规划流程`, `✅完成`
 ## User Preferences
 
 - Language preference: preserve necessary code symbols, method names, place names, technical terms, field names, enum values, paths, commands, file names, and template-required headings as written. User-readable prose in papers, code comments, general documentation, and documents written by skills should follow context and user requirements; when uncertain, use Chinese by default, and documents written by skills should default to Chinese prose.
+- Paired documentation preference: when Chinese and English versions of a document both exist, treat the Chinese version as the user-edited source. After changing the Chinese version, sync the English version and review both for semantic consistency before committing.
