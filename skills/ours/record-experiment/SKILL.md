@@ -100,6 +100,8 @@ The run record must include these launch fields:
 
 Do not launch if the exact command, cwd, and intended log/result locations are missing.
 
+If the interpreter, script, config, cwd, or other launch-critical input is unavailable, record the run as `planned` or `not_run` with the blocker. Do not start a command that is already known to fail only to satisfy urgency.
+
 If git or environment details cannot be collected, write `Unknown` with a short reason instead of inventing values.
 
 ## During run

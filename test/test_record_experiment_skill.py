@@ -109,6 +109,7 @@ class Scenario:
     expected_conclusion: str | None = None
     require_unknown: bool = False
     require_dashboard: bool = False
+    expect_not_launched: bool = False
 
 
 def prompt(body: str) -> str:
@@ -148,6 +149,7 @@ SCENARIOS: dict[str, Scenario] = {
             """
         ),
         required_text=("python train.py", "configs/ablation.yaml", "--seed 42"),
+        expect_not_launched=True,
     ),
     "dashboard_still_needs_local_record": Scenario(
         "dashboard_still_needs_local_record",
@@ -322,6 +324,29 @@ def assert_conclusion(testcase: unittest.TestCase, text: str, conclusion: str) -
     testcase.assertRegex(text, rf"(?im)^-\s+Conclusion\s*:\s*{re.escape(conclusion)}\b")
 
 
+def assert_not_launched(testcase: unittest.TestCase, workspace: Path, text: str) -> None:
+    testcase.assertNotRegex(text, r"(?im)^-\s+(?:Status|Final status)\s*:\s*failed\b")
+    testcase.assertNotRegex(text, r"(?im)command (?:started|failed)")
+    for line in text.splitlines():
+        match = re.match(r"^-\s+Exit code\s*:\s*(.*)$", line, flags=re.IGNORECASE)
+        if not match:
+            continue
+        value = match.group(1).strip().lower()
+        testcase.assertTrue(
+            value == "" or value.startswith(("n/a", "unknown", "pending")),
+            f"Unexpected launched exit code value: {value}",
+        )
+    allowed_roots = {experiment_root(workspace), runs_dir(workspace)}
+    unexpected = []
+    for path in workspace.rglob("*"):
+        if not path.is_file():
+            continue
+        if any(path.is_relative_to(root) for root in allowed_roots):
+            continue
+        unexpected.append(path.relative_to(workspace).as_posix())
+    testcase.assertEqual([], unexpected, f"Unexpected launch artifacts: {unexpected}")
+
+
 def validate_scenario_result(
     testcase: unittest.TestCase,
     scenario_id: str,
@@ -351,6 +376,8 @@ def validate_scenario_result(
     if scenario.require_dashboard:
         testcase.assertIn("W&B / MLflow / TensorBoard", record_text)
         testcase.assertIn("wandb.ai", combined_text)
+    if scenario.expect_not_launched:
+        assert_not_launched(testcase, workspace, record_text)
 
 
 def write_index(workspace: Path, run_id: str, status: str, conclusion: str) -> None:
@@ -381,8 +408,20 @@ def write_run_record(
     dashboard: str = "N/A",
     extra_notes: str = "",
     evidence: str = "",
+    launched: bool = True,
 ) -> None:
     runs_dir(workspace).mkdir(parents=True, exist_ok=True)
+    end_time = "2026-07-01 12:05" if launched else "N/A"
+    exit_code = "0" if launched else "N/A"
+    metrics = "accuracy 81.2" if launched else "Pending; command not launched"
+    result_files = "results/out.json" if launched else "Pending; command not launched"
+    best_checkpoint = "N/A" if launched else "Pending; command not launched"
+    failure_reason = extra_notes or ("N/A" if launched else "N/A; command not launched")
+    validity_notes = (
+        f"same split as baseline {evidence}"
+        if launched
+        else f"Not launched; blocker recorded before execution {evidence}"
+    )
     record = f"""# Experiment Run: {run_id}
 
 ## Snapshot
@@ -434,13 +473,13 @@ def write_run_record(
 ## Results
 
 - Final status: {final_status}
-- End time: 2026-07-01 12:05
-- Exit code: 0
-- Metrics: accuracy 81.2
-- Result files: results/out.json
-- Best checkpoint: N/A
-- Failure reason: {extra_notes or "N/A"}
-- Validity notes: same split as baseline {evidence}
+- End time: {end_time}
+- Exit code: {exit_code}
+- Metrics: {metrics}
+- Result files: {result_files}
+- Best checkpoint: {best_checkpoint}
+- Failure reason: {failure_reason}
+- Validity notes: {validity_notes}
 
 ## Conclusion
 
@@ -522,6 +561,7 @@ class RecordExperimentScenarioHarnessTests(unittest.TestCase):
                             dashboard=dashboard,
                             extra_notes=notes,
                             evidence=" ".join(scenario.required_text),
+                            launched=not scenario.expect_not_launched,
                         )
                     validate_scenario_result(self, scenario.scenario_id, workspace)
 
