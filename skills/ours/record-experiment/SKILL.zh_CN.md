@@ -40,8 +40,8 @@ description: 记录实验运行指令和结果。在训练、评估、测试、b
 
 默认记录位置：
 
-- `docs/experiment-records/INDEX.md`
-- `docs/experiment-records/runs/<run_id>.md`
+- `hello-scholar/memory/experiment-records/INDEX.md`
+- `hello-scholar/memory/experiment-records/runs/<run_id>.md`
 
 使用这些模板：
 
@@ -168,9 +168,9 @@ run record 必须包含这些启动字段：
 ## 最小流程
 
 1. 判断用户是否即将启动、监控、失败处理、停止或总结一个实验。
-2. 在 `docs/experiment-records/runs/` 下查找或创建 run record。
+2. 在 `hello-scholar/memory/experiment-records/runs/` 下查找或创建 run record。
 3. 启动前确保硬门槛字段齐全。
-4. 在 `docs/experiment-records/INDEX.md` 中为该 run 更新一行。
+4. 在 `hello-scholar/memory/experiment-records/INDEX.md` 中为该 run 更新一行。
 5. 随着监控、失败和结果事件发生，持续追加记录。
 6. 运行结束后，最终确定 status、metrics、conclusion 和 next action。
 

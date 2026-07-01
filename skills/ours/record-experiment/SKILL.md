@@ -40,8 +40,8 @@ Do not use this skill for ordinary coding tasks, general work logs, literature n
 
 Default record location:
 
-- `docs/experiment-records/INDEX.md`
-- `docs/experiment-records/runs/<run_id>.md`
+- `hello-scholar/memory/experiment-records/INDEX.md`
+- `hello-scholar/memory/experiment-records/runs/<run_id>.md`
 
 Use the templates in:
 
@@ -168,9 +168,9 @@ A negative result means the experiment ran validly but did not support the purpo
 ## Minimal procedure
 
 1. Identify whether the user is about to launch, monitor, fail, stop, or summarize an experiment.
-2. Find or create the run record under `docs/experiment-records/runs/`.
+2. Find or create the run record under `hello-scholar/memory/experiment-records/runs/`.
 3. Ensure the launch hard-gate fields are present before launch.
-4. Update `docs/experiment-records/INDEX.md` with one row for the run.
+4. Update `hello-scholar/memory/experiment-records/INDEX.md` with one row for the run.
 5. Append monitoring, failure, and result events as they happen.
 6. Finalize status, metrics, conclusion, and next action after the run ends.
 
