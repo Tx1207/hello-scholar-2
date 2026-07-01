@@ -26,7 +26,7 @@ description: "在任何创造性工作之前，你必须使用此 skill——创
 3. **提出澄清问题**——一次一个，理解目的、约束、成功标准
 4. **提出 2-3 种方案**——包含权衡和你的建议
 5. **展示设计**——按复杂度拆分章节，每节后获得用户批准
-6. **编写设计文档**——保存到 `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md` 并 commit
+6. **编写设计文档**——保存到 `hello-scholar/memory/specs/YYYY-MM-DD-<topic>-design.md` 并 commit
 7. **Spec 自审**——快速内联检查占位符、矛盾、歧义、范围（见下方）
 8. **用户审阅已写好的 spec**——继续前让用户审阅 spec 文件
 9. **转入实现**——调用 writing-plans skill 来创建实现计划
@@ -108,7 +108,7 @@ digraph brainstorming {
 
 **文档：**
 
-- 将已验证的设计（spec）写入 `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`
+- 将已验证的设计（spec）写入 `hello-scholar/memory/specs/YYYY-MM-DD-<topic>-design.md`
   - （用户对 spec 位置的偏好会覆盖这个默认值）
 - 如果可用，使用 elements-of-style:writing-clearly-and-concisely skill
 - 将设计文档 commit 到 git
