@@ -1,4 +1,4 @@
-# Geju Output Template
+# Takeoff Output Template
 
 Use this template when the user wants the design space opened up and conservative local thinking challenged.
 

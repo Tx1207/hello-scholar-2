@@ -1,6 +1,6 @@
-# Goudi Anti-Patterns and Counter-Moves
+# Landing Anti-Patterns and Counter-Moves
 
-The five failure patterns goudi exists to catch. Step 2 of the Workflow scans a proposal
+The five failure patterns landing exists to catch. Step 2 of the Workflow scans a proposal
 for these; when one is present, apply its counter-move while choosing the minimum viable
 move and the stop rule.
 

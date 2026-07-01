@@ -1,4 +1,4 @@
-# Goudi Output Template
+# Landing Output Template
 
 Use this template when a proposal needs to be grounded, shrunk into a proof point, or pressure-tested for feasibility.
 

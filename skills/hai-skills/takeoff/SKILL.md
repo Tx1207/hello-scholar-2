@@ -1,18 +1,18 @@
 ---
-name: geju
+name: takeoff
 description: |
   Produces a bold, high-altitude direction judgment (格局判断): a sharp thesis on the right target
   model, a kill-list of what to delete / merge / split / reframe, a Conservative-vs-Clean-vs-Staged
   options table, a verification path (first proof point + falsifier) that keeps the bold call
   testable, and a closing payoff ledger (收益账单) showing why the direction is worth its price. Use whenever the user wants to think bigger, open the design space, or challenge a
   conservative / incremental / over-compatible proposal — proactively, even when unnamed. Triggers:
-  打开格局, 格局太小, 你格局小了, 拔高一点, 站高一点, 别太保守, 太碎了, 别老想着兼容,
+  takeoff, 起飞, geju, 打开格局, 格局太小, 你格局小了, 拔高一点, 站高一点, 别太保守, 太碎了, 别老想着兼容,
   别被重构难度绑架, 大方向; and English "too incremental / too safe", "play it bigger",
   "greenfield this", "what if there were no legacy". Once the bold direction needs feasibility /
-  landing pressure-testing, route to goudi.
+  landing pressure-testing, route to landing.
 ---
 
-# Geju
+# Takeoff
 
 For Chinese readers, see `SKILL.zh_CN.md`. The English `SKILL.md` is the execution source of truth.
 
@@ -24,7 +24,7 @@ Open the design space during 方案讨论: recommend the right target model, not
 
 大胆假设，小心求证。
 
-Geju does not produce a guaranteed-correct answer. It produces a high-leverage, provocative hypothesis that opens the design space. Treat the thesis as a strong hypothesis to test, not as an oracle: first make the bold call, then define the careful verification path.
+Takeoff (formerly `geju`) does not produce a guaranteed-correct answer. It produces a high-leverage, provocative hypothesis that opens the design space. Treat the thesis as a strong hypothesis to test, not as an oracle: first make the bold call, then define the careful verification path.
 
 Refactor difficulty, compatibility fear, existing implementation shape, and local details are constraints to price, not masters to obey. Do not let them decide the direction too early.
 
@@ -129,8 +129,8 @@ Output discipline that the sections do not already enforce:
 
 ## Use a different skill when
 
-- The bold direction is chosen and now needs feasibility / landing pressure-testing — use `goudi` to make it executable and de-risk landing. geju and goudi are a paired stance: geju opens the frame, goudi puts it on the ground.
-- The question is whether the idea is worth doing at all (do / kill / defer) — use `hai-idea`. geju assumes the work is worth doing and questions only its scope and altitude.
+- The bold direction is chosen and now needs feasibility / landing pressure-testing — use `landing` to make it executable and de-risk landing. `takeoff` and `landing` are a paired stance: `takeoff` opens the frame, `landing` puts it on the ground.
+- The question is whether the idea is worth doing at all (do / kill / defer) — use `hai-idea`. `takeoff` assumes the work is worth doing and questions only its scope and altitude.
 - The user wants implementation-quality review — use `clean-code-reviewer`.
 - The user wants APoSD-level architecture critique (module boundaries, abstraction depth) — use `hai-architecture`.
 - The output is a PRD — use `hai-prd`.

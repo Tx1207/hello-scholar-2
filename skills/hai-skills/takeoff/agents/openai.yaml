@@ -1,0 +1,4 @@
+interface:
+  display_name: "Takeoff"
+  short_description: "Open up bold strategic design thinking"
+  default_prompt: "Use $takeoff to open up the design space and challenge conservative local thinking."
