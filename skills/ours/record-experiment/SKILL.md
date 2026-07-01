@@ -73,25 +73,30 @@ Before running any experiment command, create or update the run record and the i
 
 The run record must include these launch fields:
 
-- `run_id`
-- `status: planned` or `status: queued`
-- `purpose`
-- `exact_command`
-- `cwd`
-- `script` or `N/A` with reason
-- `config_file` or `N/A` with reason
-- `cli_overrides` or `None`
-- `seed` or `N/A` with reason
-- `data_version_or_split` or `N/A` with reason
-- `git_branch`
-- `git_commit`
-- `git_dirty_status`
-- `backend`
-- `expected_log_path`
-- `expected_result_path`
-- `expected_signal`
-- `failure_signal`
-- `stop_rule`
+- `Run ID`
+- `Status: planned` or `Status: queued`
+- `Purpose`
+- `Exact command`
+- `CWD`
+- `Script` or `N/A` with reason
+- `Config file` or `N/A` with reason
+- `CLI overrides` or `None`
+- `Seed` or `N/A` with reason
+- `Data version / split` or `N/A` with reason
+- `Preprocessing` or `N/A` with reason
+- `Git branch`
+- `Git commit`
+- `Git dirty status`
+- `Backend`
+- `Machine / GPU`
+- `Python / environment`
+- `Log path`
+- `Checkpoint path`
+- `Result path`
+- `W&B / MLflow / TensorBoard`
+- `Expected signal`
+- `Failure signal`
+- `Stop rule`
 
 Do not launch if the exact command, cwd, and intended log/result locations are missing.
 
@@ -114,16 +119,16 @@ Record only concise evidence: command, path, metric value, error type, and short
 
 When the run ends or is abandoned, update:
 
-- final status
-- end time
-- log path
-- result path
-- checkpoint path, if any
-- metrics summary
-- failure reason, if any
-- validity notes
-- conclusion
-- next action
+- `Final status`
+- `End time`
+- `Log path`
+- `Result path`
+- `Checkpoint path`, if any
+- `Metrics`
+- `Failure reason`, if any
+- `Validity notes`
+- `Conclusion`
+- `Next action`
 
 Failed, invalid, abandoned, and negative-result runs must still be recorded.
 

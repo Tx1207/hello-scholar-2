@@ -4,27 +4,32 @@
 
 These fields must exist before an experiment command is launched:
 
-- `run_id`
-- `status`
-- `purpose`
-- `exact_command`
-- `cwd`
-- `script` or `N/A` with reason
-- `config_file` or `N/A` with reason
-- `cli_overrides` or `None`
-- `seed` or `N/A` with reason
-- `data_version_or_split` or `N/A` with reason
-- `git_branch`
-- `git_commit`
-- `git_dirty_status`
-- `backend`
-- `expected_log_path`
-- `expected_result_path`
-- `expected_signal`
-- `failure_signal`
-- `stop_rule`
+- `Run ID`
+- `Status`
+- `Purpose`
+- `Exact command`
+- `CWD`
+- `Script` or `N/A` with reason
+- `Config file` or `N/A` with reason
+- `CLI overrides` or `None`
+- `Seed` or `N/A` with reason
+- `Data version / split` or `N/A` with reason
+- `Preprocessing` or `N/A` with reason
+- `Git branch`
+- `Git commit`
+- `Git dirty status`
+- `Backend`
+- `Machine / GPU`
+- `Python / environment`
+- `Log path`
+- `Checkpoint path`
+- `Result path`
+- `W&B / MLflow / TensorBoard`
+- `Expected signal`
+- `Failure signal`
+- `Stop rule`
 
-Do not launch if `exact_command`, `cwd`, and intended log/result locations are missing.
+Do not launch if `Exact command`, `CWD`, and intended log/result locations are missing.
 
 ## Status values
 

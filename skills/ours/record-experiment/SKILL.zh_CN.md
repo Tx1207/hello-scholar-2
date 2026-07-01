@@ -73,25 +73,30 @@ description: 记录实验运行指令和结果。在训练、评估、测试、b
 
 run record 必须包含这些启动字段：
 
-- `run_id`
-- `status: planned` 或 `status: queued`
-- `purpose`
-- `exact_command`
-- `cwd`
-- `script`，或带原因的 `N/A`
-- `config_file`，或带原因的 `N/A`
-- `cli_overrides`，或 `None`
-- `seed`，或带原因的 `N/A`
-- `data_version_or_split`，或带原因的 `N/A`
-- `git_branch`
-- `git_commit`
-- `git_dirty_status`
-- `backend`
-- `expected_log_path`
-- `expected_result_path`
-- `expected_signal`
-- `failure_signal`
-- `stop_rule`
+- `Run ID`
+- `Status: planned` 或 `Status: queued`
+- `Purpose`
+- `Exact command`
+- `CWD`
+- `Script`，或带原因的 `N/A`
+- `Config file`，或带原因的 `N/A`
+- `CLI overrides`，或 `None`
+- `Seed`，或带原因的 `N/A`
+- `Data version / split`，或带原因的 `N/A`
+- `Preprocessing`，或带原因的 `N/A`
+- `Git branch`
+- `Git commit`
+- `Git dirty status`
+- `Backend`
+- `Machine / GPU`
+- `Python / environment`
+- `Log path`
+- `Checkpoint path`
+- `Result path`
+- `W&B / MLflow / TensorBoard`
+- `Expected signal`
+- `Failure signal`
+- `Stop rule`
 
 如果缺少精确命令、工作目录以及预期日志/结果位置，不要启动。
 
@@ -114,16 +119,16 @@ run record 必须包含这些启动字段：
 
 当运行结束或被放弃时，更新：
 
-- final status
-- end time
-- log path
-- result path
-- checkpoint path，如果有
-- metrics summary
-- failure reason，如果有
-- validity notes
-- conclusion
-- next action
+- `Final status`
+- `End time`
+- `Log path`
+- `Result path`
+- `Checkpoint path`，如果有
+- `Metrics`
+- `Failure reason`，如果有
+- `Validity notes`
+- `Conclusion`
+- `Next action`
 
 失败、失效、放弃和负结果运行也必须记录。
 
