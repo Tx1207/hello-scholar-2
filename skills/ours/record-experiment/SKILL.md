@@ -38,7 +38,7 @@ Do not use this skill for ordinary coding tasks, general work logs, literature n
 
 ## Storage
 
-Default record location:
+Default record location is the literal `hello-scholar/` directory under the current project root:
 
 - `hello-scholar/memory/experiment-records/INDEX.md`
 - `hello-scholar/memory/experiment-records/runs/<run_id>.md`

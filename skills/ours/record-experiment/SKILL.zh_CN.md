@@ -38,7 +38,7 @@ description: 记录实验运行指令和结果。在训练、评估、测试、b
 
 ## 存储
 
-默认记录位置：
+默认记录位置是在当前项目根目录下创建字面目录 `hello-scholar/`：
 
 - `hello-scholar/memory/experiment-records/INDEX.md`
 - `hello-scholar/memory/experiment-records/runs/<run_id>.md`
