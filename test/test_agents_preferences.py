@@ -15,31 +15,25 @@ class AgentPreferenceTests(unittest.TestCase):
         english = AGENTS_MD.read_text(encoding="utf-8")
         chinese = AGENTS_ZH.read_text(encoding="utf-8")
 
-        self.assertIn("documents written by skills", english)
+        self.assertIn("user-readable documents written by skills", english)
+        self.assertIn("code symbols", english)
         self.assertIn("field names", english)
         self.assertIn("enum values", english)
         self.assertIn("paths", english)
         self.assertIn("commands", english)
-        self.assertIn("documents written by skills should default to Chinese prose", english)
+        self.assertIn("template-required headings", english)
+        self.assertIn("choose language according to context and user requirements", english)
+        self.assertIn("default language: Chinese/English", english)
 
         self.assertIn("Skill 写入的用户可读文档", chinese)
+        self.assertIn("代码符号", chinese)
         self.assertIn("字段名", chinese)
         self.assertIn("枚举值", chinese)
         self.assertIn("路径", chinese)
         self.assertIn("命令", chinese)
-        self.assertIn("Skill 写入文档默认使用中文正文", chinese)
-
-    def test_chinese_docs_are_source_for_paired_document_sync(self) -> None:
-        english = AGENTS_MD.read_text(encoding="utf-8")
-        chinese = AGENTS_ZH.read_text(encoding="utf-8")
-
-        self.assertIn("Chinese version as the user-edited source", english)
-        self.assertIn("sync the English version", english)
-        self.assertIn("semantic consistency before committing", english)
-
-        self.assertIn("中文版本作为用户编辑的事实源", chinese)
-        self.assertIn("必须同步英文版本", chinese)
-        self.assertIn("提交前检查中英文语义一致", chinese)
+        self.assertIn("模板要求的标题", chinese)
+        self.assertIn("根据上下文和用户需求确定语言", chinese)
+        self.assertIn("默认语言：中文/English", chinese)
 
 
 if __name__ == "__main__":
