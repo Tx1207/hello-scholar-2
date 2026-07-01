@@ -134,3 +134,5 @@ The main agent's final closing message should use the hello-scholar wrapper form
 Statuses: `💡直接响应`, `⚡快速执行`, `🔵规划流程`, `✅完成`, `❓等待输入`, `⚠️警告`, `❌错误`. When waiting for user input, confirmation, authorization, or additional information, use only `❓等待输入`; use `✅完成` only when this turn's execution is complete and no input is being awaited.
 
 ## User Preferences
+
+- Language preference: preserve necessary code symbols, method names, place names, technical terms, field names, enum values, paths, commands, file names, and template-required headings as written. User-readable prose in papers, code comments, general documentation, and documents written by skills should follow context and user requirements; when uncertain, use Chinese by default, and documents written by skills should default to Chinese prose.
