@@ -50,7 +50,7 @@ Do not let `landing` erase the bold target. Compress the first step, not the amb
 
 3. Choose the minimum viable move. Pick one narrow vertical slice, proof point, or decision artifact. Define what it changes and what it refuses to change. Prefer something that creates evidence, not just more planning.
 
-4. Make verification explicit. Success criteria must be observable; failure signals must be named; the check must be cheap enough to run before confidence decays. If behavior needs to be driven by tests, route to `hai-tdd`.
+4. Make verification explicit. Success criteria must be observable; failure signals must be named; the check must be cheap enough to run before confidence decays. If behavior needs to be driven by tests, route to `test-driven-development`.
 
 5. Cut scope aggressively. List what the first move should not attempt. Cut compatibility work not tied to a real contract, architecture polish that does not affect the proof point, and broad migration until the narrow slice is proven.
 
@@ -66,14 +66,13 @@ Beyond the template's per-field shape, hold these constraints:
 - Name real constraints separately from anxiety or inertia.
 - Preserve the bold target when it is useful, but do not let it replace execution.
 - The default is a smaller proof, not paralysis. Do not turn `landing` into "do nothing."
-- Do not write a giant plan; route to `hai-goal` when the output needs phases, todos, and execution tracking.
+- Do not write a giant plan; route to `writing-plans` when the output needs phases, todos, and execution structure.
 
 ## Route elsewhere when
 
 - The goal is to open the frame, escape compatibility fear, and think bigger — use `takeoff`. (`landing` grounds an already opened frame; it does not open one.)
-- The question is whether the idea deserves doing at all — use `hai-idea`. `landing` pressure-tests how to land a proposal, not whether it should exist.
-- Behavior needs to be driven by tests — use `hai-tdd`.
-- The output needs full phases, todos, and execution tracking — use `hai-goal`.
+- Behavior needs to be driven by tests — use `test-driven-development`.
+- The output needs full phases, todos, and execution structure — use `writing-plans`; if a written plan already exists and the task is to execute it, use `executing-plans`.
 
 ## What This Skill Is Not
 
