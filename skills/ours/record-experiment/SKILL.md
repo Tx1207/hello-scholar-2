@@ -38,7 +38,7 @@ Do not use this skill for ordinary coding tasks, general work logs, literature n
 
 ## Storage
 
-Default record location is the literal `hello-scholar/` directory under the current project root:
+Default record location is under the current task's project root or worktree root:
 
 - `hello-scholar/memory/experiment-records/INDEX.md`
 - `hello-scholar/memory/experiment-records/runs/<run_id>.md`
@@ -175,9 +175,9 @@ A negative result means the experiment ran validly but did not support the purpo
 ## Minimal procedure
 
 1. Identify whether the user is about to launch, monitor, fail, stop, or summarize an experiment.
-2. Find or create the run record under `hello-scholar/memory/experiment-records/runs/`.
+2. Find or create the run record under the current task's project or worktree root at `hello-scholar/memory/experiment-records/runs/`.
 3. Ensure the launch hard-gate fields are present before launch.
-4. Update `hello-scholar/memory/experiment-records/INDEX.md` with one row for the run.
+4. Update `hello-scholar/memory/experiment-records/INDEX.md` under that same root with one row for the run.
 5. Append monitoring, failure, and result events as they happen.
 6. Finalize status, metrics, conclusion, and next action after the run ends.
 

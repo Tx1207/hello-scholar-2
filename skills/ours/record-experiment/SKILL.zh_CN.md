@@ -38,7 +38,7 @@ description: 记录实验运行指令和结果。在训练、评估、测试、b
 
 ## 存储
 
-默认记录位置是在当前项目根目录下创建字面目录 `hello-scholar/`：
+默认记录位置在当前任务的项目根目录或 worktree 根目录下：
 
 - `hello-scholar/memory/experiment-records/INDEX.md`
 - `hello-scholar/memory/experiment-records/runs/<run_id>.md`
@@ -175,9 +175,9 @@ run record 必须包含这些启动字段：
 ## 最小流程
 
 1. 判断用户是否即将启动、监控、失败处理、停止或总结一个实验。
-2. 在 `hello-scholar/memory/experiment-records/runs/` 下查找或创建 run record。
+2. 在当前任务的项目根目录或 worktree 根目录下的 `hello-scholar/memory/experiment-records/runs/` 查找或创建 run record。
 3. 启动前确保硬门槛字段齐全。
-4. 在 `hello-scholar/memory/experiment-records/INDEX.md` 中为该 run 更新一行。
+4. 在同一根目录下的 `hello-scholar/memory/experiment-records/INDEX.md` 中为该 run 更新一行。
 5. 随着监控、失败和结果事件发生，持续追加记录。
 6. 运行结束后，最终确定 status、metrics、conclusion 和 next action。
 
