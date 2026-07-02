@@ -1,4 +1,5 @@
-# hello-scholar
+# hello-scholar-2
+在 Agent 相关实践中发现，盲目堆砌大量技能并不会提升智能体性能，技能数量无法等价于执行质量。因此我整合了当前业内认可度较高的优质 Skill 资源，搭建本仓库，专供个人科研课题与对照实验开发使用，整理为hello-scholar-2。
 
 hello-scholar 是一套面向科研和工程协作的 agent skills 与项目规则集合。
 
