@@ -8,6 +8,10 @@ argument-hint: "下一次会话将用于什么？"
 
 在文档中包含一个 "suggested skills" 章节，建议代理应调用哪些技能。
 
+必需章节名、路径、URL、命令、代码标识符、skill 名称和技术术语保持原文。
+
+用户可读的 handoff 正文遵循仓库语言偏好。当仓库声明默认语言时，summary、current status、open questions、risks 和 next steps 等正文使用该默认语言。仓库默认语言明确时，不要根据任务提示语言推断 handoff 正文语言。
+
 不要重复已经记录在其他 artifacts（PRDs、plans、ADRs、issues、commits、diffs）中的内容。改用路径或 URL 引用它们。
 
 删去任何敏感信息，例如 API keys、passwords 或 personally identifiable information。

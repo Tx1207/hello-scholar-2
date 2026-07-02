@@ -18,6 +18,12 @@ Assume they are a skilled developer, but know almost nothing about our toolset o
 **Save plans under the current task's project or worktree root at:** `hello-scholar/memory/plans/YYYY-MM-DD-<feature-name>.md`
 - (User preferences for plan location override this default)
 
+## Plan Language
+
+Keep required headings, field labels, paths, commands, code identifiers, skill names, and technical terms as written.
+
+Write user-readable prose according to the repository language preference. When the repository states a default language, use that default for goals, architecture notes, task descriptions, expected results, and review notes. Do not infer plan prose language from the task prompt when a repository default is explicit.
+
 ## Scope Check
 
 If the spec covers multiple independent subsystems, it should have been broken into sub-project specs during brainstorming. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.

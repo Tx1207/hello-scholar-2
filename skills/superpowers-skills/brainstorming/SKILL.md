@@ -113,6 +113,11 @@ digraph brainstorming {
 - Use elements-of-style:writing-clearly-and-concisely skill if available
 - Commit the design document to git
 
+**Spec language:**
+
+- Keep required headings, paths, commands, code identifiers, skill names, and technical terms as written.
+- Write user-readable prose according to the repository language preference. When the repository states a default language, use that default for goals, requirements, design rationale, component descriptions, risks, and next steps. Do not infer spec prose language from the task prompt when a repository default is explicit.
+
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
 

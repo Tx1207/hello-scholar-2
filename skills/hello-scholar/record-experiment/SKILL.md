@@ -50,6 +50,12 @@ Use the templates in:
 
 If the repository already has an experiment-record convention, use the existing convention and keep the same required fields.
 
+## Record language
+
+Keep template headings, field names, enum values, paths, commands, file names, code symbols, and technical terms as written.
+
+Write user-readable prose according to the repository language preference. When the repository states a default language, use that default for prose values such as `Purpose`, `Expected signal`, `Failure signal`, `Stop rule`, event observations/actions, `Validity notes`, `Caveats`, and `Next action`. Do not infer prose language from the task prompt when a repository default is explicit.
+
 ## Run ID
 
 Create a run id before launch:

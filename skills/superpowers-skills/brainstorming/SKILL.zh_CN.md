@@ -113,6 +113,11 @@ digraph brainstorming {
 - 如果可用，使用 elements-of-style:writing-clearly-and-concisely skill
 - 将设计文档 commit 到 git
 
+**Spec 语言：**
+
+- 必需标题、路径、命令、代码标识符、skill 名称和技术术语保持原文。
+- 用户可读的 spec 正文遵循仓库语言偏好。当仓库声明默认语言时，goal、requirements、design rationale、component descriptions、risks 和 next steps 等正文使用该默认语言。仓库默认语言明确时，不要根据任务提示语言推断 spec 正文语言。
+
 **Spec 自审：**
 写完 spec 文档后，用新鲜视角审视它：
 

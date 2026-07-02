@@ -135,4 +135,4 @@ Statuses: `💡直接响应`, `⚡快速执行`, `🔵规划流程`, `✅完成`
 
 ## User Preferences
 
-- Language preference: keep necessary code symbols, method names, place names, technical terms, field names, enum values, paths, commands, file names, and template-required headings as written. Papers, code comments, general documentation, and user-readable documents written by skills should choose language according to context and user requirements; when uncertain, use the default language: Chinese/English.
+- Language preference: keep necessary code symbols, method names, place names, technical terms, field names, enum values, paths, commands, file names, and template-required headings as written. Papers, code comments, general documentation, and user-readable documents written by skills should choose language according to context and user requirements; when uncertain, use Chinese as the default language.

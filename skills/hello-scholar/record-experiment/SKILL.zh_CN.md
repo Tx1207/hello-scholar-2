@@ -50,6 +50,12 @@ description: 记录实验运行指令和结果。在训练、评估、测试、b
 
 如果仓库已有实验记录约定，使用已有约定，并保留相同的必需字段。
 
+## 记录语言
+
+模板标题、字段名、枚举值、路径、命令、文件名、代码符号和技术术语保持原文。
+
+用户可读正文字段遵循仓库语言偏好。当仓库声明默认语言时，`Purpose`、`Expected signal`、`Failure signal`、`Stop rule`、事件 observation/action、`Validity notes`、`Caveats`、`Next action` 等正文值使用该默认语言。仓库默认语言明确时，不要根据任务提示语言推断正文语言。
+
 ## Run ID
 
 启动前创建 run id：
