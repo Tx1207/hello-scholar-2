@@ -152,6 +152,17 @@ skills/superpowers-skills/
 
 每个 skill 以 `SKILL.md` frontmatter 中的 `name` 作为安装目录名。
 
+## 参考来源
+
+hello-scholar 的设计参考了以下项目和规范：
+
+- OpenAI Codex 官方文档：`AGENTS.md`、`.agents/skills`、Codex skills 和 symlink skill 发现规则。
+- Anthropic Claude Code 官方文档：`CLAUDE.md`、`.claude/skills` 和 Claude Code skills 的项目级安装方式。
+- `Auto-claude-code-research-in-sleep`：科研自动化、实验、论文、知识库和 review 类 skill 的组织方式。
+- `andrej-karpathy-skills`：短 prompt、强约束原则和轻量规则表达方式。
+- `superpowers` skills：brainstorming、TDD、计划、执行、调试、review、验证和交接等工作流 skill 的结构。
+- 本仓库 `docs/need_skills/`：记录候选 skill 的筛选、最小 skill 集和合并取舍。
+
 ## 开发
 
 运行测试：
