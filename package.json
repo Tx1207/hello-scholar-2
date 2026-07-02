@@ -1,0 +1,14 @@
+{
+  "name": "hello-scholar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "commonjs",
+  "bin": {
+    "hello-scholar": "bin/hello-scholar.js"
+  },
+  "scripts": {
+    "test": "node test/run-all.js",
+    "test:js": "node --test test/test_*.js",
+    "test:py": "python3 -m unittest discover -s test"
+  }
+}
