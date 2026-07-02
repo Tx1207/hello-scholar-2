@@ -6,11 +6,12 @@ argument-hint: "What will the next session be used for?"
 
 Write a handoff document summarising the current conversation so a fresh agent can continue the work. Save it under the current task's project or worktree root at `hello-scholar/memory/handoffs/YYYY-MM-DD-<topic>-handoff.md`.
 
-Include a "suggested skills" section in the document, which suggests skills that the agent should invoke.
+Choose the handoff template by repository language preference:
+- Chinese default: `assets/handoff-template.zh_CN.md`
+- Otherwise: `assets/handoff-template.md`
+- Do not infer template language from the task prompt when the repository default language is explicit.
 
-Keep required section names, paths, URLs, commands, code identifiers, skill names, and technical terms as written.
-
-Write user-readable prose according to the repository language preference. When the repository states a default language, use that default for summaries, current status, open questions, risks, and next steps. Do not infer handoff prose language from the task prompt when a repository default is explicit.
+Use the selected template's headings as written. Fill user-readable prose in that same template language. Keep paths, URLs, commands, code identifiers, skill names, and technical terms as written.
 
 Do not duplicate content already captured in other artifacts (PRDs, plans, ADRs, issues, commits, diffs). Reference them by path or URL instead.
 

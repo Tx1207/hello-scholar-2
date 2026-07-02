@@ -43,18 +43,18 @@ description: 记录实验运行指令和结果。在训练、评估、测试、b
 - `hello-scholar/memory/experiment-records/INDEX.md`
 - `hello-scholar/memory/experiment-records/runs/<run_id>.md`
 
-使用这些模板：
+根据仓库语言偏好选择模板：
 
-- `assets/index-template.md`
-- `assets/run-record-template.md`
+- 默认中文：`assets/index-template.zh_CN.md` 和 `assets/run-record-template.zh_CN.md`
+- 其他情况：`assets/index-template.md` 和 `assets/run-record-template.md`
+
+仓库默认语言明确时，不要根据任务提示语言推断模板语言。
 
 如果仓库已有实验记录约定，使用已有约定，并保留相同的必需字段。
 
 ## 记录语言
 
-模板标题、字段名、枚举值、路径、命令、文件名、代码符号和技术术语保持原文。
-
-用户可读正文字段遵循仓库语言偏好。当仓库声明默认语言时，`Purpose`、`Expected signal`、`Failure signal`、`Stop rule`、事件 observation/action、`Validity notes`、`Caveats`、`Next action` 等正文值使用该默认语言。仓库默认语言明确时，不要根据任务提示语言推断正文语言。
+使用所选模板中的标题和字段标签。用户可读字段值使用同一模板语言。枚举值、路径、命令、文件名、代码符号、工具名和技术术语保持原文。
 
 ## Run ID
 
@@ -77,32 +77,7 @@ description: 记录实验运行指令和结果。在训练、评估、测试、b
 
 运行任何实验命令前，先创建或更新 run record 和 index。
 
-run record 必须包含这些启动字段：
-
-- `Run ID`
-- `Status: planned` 或 `Status: queued`
-- `Purpose`
-- `Exact command`
-- `CWD`
-- `Script`，或带原因的 `N/A`
-- `Config file`，或带原因的 `N/A`
-- `CLI overrides`，或 `None`
-- `Seed`，或带原因的 `N/A`
-- `Data version / split`，或带原因的 `N/A`
-- `Preprocessing`，或带原因的 `N/A`
-- `Git branch`
-- `Git commit`
-- `Git dirty status`
-- `Backend`
-- `Machine / GPU`
-- `Python / environment`
-- `Log path`
-- `Checkpoint path`
-- `Result path`
-- `W&B / MLflow / TensorBoard`
-- `Expected signal`
-- `Failure signal`
-- `Stop rule`
+run record 必须包含所选 run-record 模板中“启动记录”“预期行为”和“路径”章节的全部字段。
 
 如果缺少精确命令、工作目录以及预期日志/结果位置，不要启动。
 

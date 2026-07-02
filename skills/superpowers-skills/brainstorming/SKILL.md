@@ -110,13 +110,16 @@ digraph brainstorming {
 
 - Write the validated design (spec) under the current task's project or worktree root at `hello-scholar/memory/specs/YYYY-MM-DD-<topic>-design.md`
   - (User preferences for spec location override this default)
+- Choose the spec template by repository language preference:
+  - Chinese default: `assets/spec-template.zh_CN.md`
+  - Otherwise: `assets/spec-template.md`
+  - Do not infer template language from the task prompt when the repository default language is explicit.
 - Use elements-of-style:writing-clearly-and-concisely skill if available
 - Commit the design document to git
 
 **Spec language:**
 
-- Keep required headings, paths, commands, code identifiers, skill names, and technical terms as written.
-- Write user-readable prose according to the repository language preference. When the repository states a default language, use that default for goals, requirements, design rationale, component descriptions, risks, and next steps. Do not infer spec prose language from the task prompt when a repository default is explicit.
+- Use the selected template's headings as written. Fill user-readable prose in that same template language. Keep paths, commands, code identifiers, skill names, and technical terms as written.
 
 **Spec Self-Review:**
 After writing the spec document, look at it with fresh eyes:
@@ -125,6 +128,7 @@ After writing the spec document, look at it with fresh eyes:
 2. **Internal consistency:** Do any sections contradict each other? Does the architecture match the feature descriptions?
 3. **Scope check:** Is this focused enough for a single implementation plan, or does it need decomposition?
 4. **Ambiguity check:** Could any requirement be interpreted two different ways? If so, pick one and make it explicit.
+5. **Language check:** Does the spec use the selected template language throughout while preserving required original terms?
 
 Fix any issues inline. No need to re-review — just fix and move on.
 

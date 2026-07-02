@@ -26,6 +26,7 @@ SKILL_MD = SKILL_DIR / "SKILL.md"
 SKILL_ZH = SKILL_DIR / "SKILL.zh_CN.md"
 FIELD_GUIDE = SKILL_DIR / "references" / "status-and-fields.md"
 RUN_TEMPLATE = SKILL_DIR / "assets" / "run-record-template.md"
+RUN_TEMPLATE_ZH = SKILL_DIR / "assets" / "run-record-template.zh_CN.md"
 
 EXPERIMENT_RECORD_ROOT = Path("hello-scholar") / "memory" / "experiment-records"
 
@@ -69,6 +70,48 @@ REQUIRED_RESULT_LABELS = (
     "Negative result",
     "Caveats",
     "Next action",
+)
+
+REQUIRED_LAUNCH_LABELS_ZH = (
+    "运行 ID",
+    "状态",
+    "目的",
+    "精确命令",
+    "工作目录",
+    "脚本",
+    "配置文件",
+    "CLI 覆盖参数",
+    "随机种子",
+    "数据版本 / 划分",
+    "预处理",
+    "Git 分支",
+    "Git 提交",
+    "Git 工作区状态",
+    "后端",
+    "机器 / GPU",
+    "Python / 环境",
+    "日志路径",
+    "检查点路径",
+    "结果路径",
+    "W&B / MLflow / TensorBoard",
+    "预期信号",
+    "失败信号",
+    "停止规则",
+)
+
+REQUIRED_RESULT_LABELS_ZH = (
+    "最终状态",
+    "结束时间",
+    "退出码",
+    "指标",
+    "结果文件",
+    "最佳检查点",
+    "失败原因",
+    "有效性说明",
+    "结论",
+    "负结果",
+    "注意事项",
+    "下一步",
 )
 
 FORBIDDEN_FIELD_LABELS = (
@@ -501,15 +544,33 @@ class RecordExperimentSkillStaticTests(unittest.TestCase):
             self.assertNotIn("Pressure scenarios", text)
             self.assertNotIn("baseline failure", text.lower())
 
-    def test_required_field_labels_are_in_skill_files_and_field_guide(self) -> None:
-        for path in (SKILL_MD, SKILL_ZH, FIELD_GUIDE):
+    def test_required_field_labels_are_in_templates_and_field_guide(self) -> None:
+        field_guide = FIELD_GUIDE.read_text(encoding="utf-8")
+        for label in REQUIRED_LAUNCH_LABELS:
+            self.assertIn(f"`{label}", field_guide, f"{label} missing from {FIELD_GUIDE}")
+
+        template = RUN_TEMPLATE.read_text(encoding="utf-8")
+        for label in REQUIRED_LAUNCH_LABELS:
+            self.assertRegex(template, rf"(?m)^-\s+{re.escape(label)}\s*:")
+
+        chinese_template = RUN_TEMPLATE_ZH.read_text(encoding="utf-8")
+        for label in REQUIRED_LAUNCH_LABELS_ZH:
+            self.assertRegex(chinese_template, rf"(?m)^-\s+{re.escape(label)}\s*:")
+
+        for path in (SKILL_MD, SKILL_ZH):
             text = path.read_text(encoding="utf-8")
-            for label in REQUIRED_LAUNCH_LABELS:
-                self.assertIn(f"`{label}", text, f"{label} missing from {path}")
+            self.assertIn("run-record-template.md", text)
+            self.assertIn("run-record-template.zh_CN.md", text)
 
     def test_run_template_uses_readable_labels(self) -> None:
         text = RUN_TEMPLATE.read_text(encoding="utf-8")
         for label in REQUIRED_LAUNCH_LABELS + REQUIRED_RESULT_LABELS:
+            self.assertRegex(text, rf"(?m)^-\s+{re.escape(label)}\s*:")
+        assert_no_snake_case_labels(self, text)
+
+    def test_chinese_run_template_uses_chinese_labels(self) -> None:
+        text = RUN_TEMPLATE_ZH.read_text(encoding="utf-8")
+        for label in REQUIRED_LAUNCH_LABELS_ZH + REQUIRED_RESULT_LABELS_ZH:
             self.assertRegex(text, rf"(?m)^-\s+{re.escape(label)}\s*:")
         assert_no_snake_case_labels(self, text)
 

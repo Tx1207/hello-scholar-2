@@ -22,9 +22,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 AGENTS_MD = REPO_ROOT / "AGENTS.md"
 AGENTS_ZH = REPO_ROOT / "AGENTS-zh.md"
 
-LANGUAGE_RULE_EN = (
-    "Write user-readable prose according to the repository language preference"
-)
+LANGUAGE_RULE_EN = "repository language preference"
 LANGUAGE_RULE_ZH = "用户可读"
 
 
@@ -49,9 +47,6 @@ CASES: tuple[FileWritingSkillCase, ...] = (
         output_root=Path("hello-scholar/memory/experiment-records"),
         required_path_parts=("runs",),
         protected_terms=(
-            "Run ID",
-            "Exact command",
-            "Data version / split",
             "python eval.py --config configs/baseline.yaml --seed 0 --split test",
         ),
         chinese_prompt=(
@@ -71,10 +66,7 @@ CASES: tuple[FileWritingSkillCase, ...] = (
         output_root=Path("hello-scholar/memory/plans"),
         required_path_parts=(),
         protected_terms=(
-            "Implementation Plan",
-            "Goal",
-            "Architecture",
-            "Tech Stack",
+            "normalize_query()",
             "pytest tests/test_search.py",
         ),
         chinese_prompt=(
@@ -115,8 +107,6 @@ CASES: tuple[FileWritingSkillCase, ...] = (
         output_root=Path("hello-scholar/memory/handoffs"),
         required_path_parts=(),
         protected_terms=(
-            "suggested skills",
-            "record-experiment",
             "test/test_skill_written_file_language.py",
         ),
         chinese_prompt=(
@@ -199,6 +189,52 @@ def marker_count(text: str, markers: tuple[str, ...]) -> int:
     return sum(1 for marker in markers if marker.lower() in lowered)
 
 
+def strip_non_prose_terms(text: str, protected_terms: tuple[str, ...]) -> str:
+    stripped = re.sub(r"`[^`]*`", " ", text)
+    for term in sorted(protected_terms, key=len, reverse=True):
+        stripped = stripped.replace(term, " ")
+    stripped = re.sub(r"https?://\S+", " ", stripped)
+    stripped = re.sub(r"\b[\w./-]+\.(?:py|md|json|ya?ml|js|ts|tsx|jsx|txt|log)\b", " ", stripped)
+    stripped = re.sub(r"\b[A-Za-z_][\w.-]*/[A-Za-z0-9_./-]+\b", " ", stripped)
+    stripped = re.sub(r"\b[A-Za-z_][\w.:-]*\(\)", " ", stripped)
+    return stripped
+
+
+def english_dominant_user_prose_lines(text: str, protected_terms: tuple[str, ...]) -> list[str]:
+    lines = []
+    in_fenced_code = False
+    in_protected_block = False
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if line.startswith("```"):
+            in_fenced_code = not in_fenced_code
+            continue
+        if in_fenced_code:
+            continue
+        if line.lower() == "protected:":
+            in_protected_block = True
+            continue
+        if in_protected_block:
+            if not line:
+                in_protected_block = False
+            else:
+                continue
+        if not line or line.startswith("|") or re.fullmatch(r"[-:| ]+", line):
+            continue
+
+        content = re.sub(r"^\s{0,3}(#{1,6}\s+|[-*+]\s+|\d+\.\s+|>\s*)", "", line)
+        content = strip_non_prose_terms(content, protected_terms)
+        english_words = english_word_count(content)
+        chinese_chars = chinese_count(content)
+        if english_words >= 8 and chinese_chars < 4:
+            lines.append(raw_line)
+        elif english_words >= 12 and english_words > chinese_chars:
+            lines.append(raw_line)
+
+    return lines
+
+
 def validate_workspace(
     testcase: unittest.TestCase,
     workspace: Path,
@@ -223,6 +259,12 @@ def validate_workspace(
             marker_count(text, case.chinese_markers),
             1,
             "Expected at least one Chinese task marker",
+        )
+        english_lines = english_dominant_user_prose_lines(text, case.protected_terms)
+        testcase.assertEqual(
+            [],
+            english_lines,
+            "Expected Chinese default to reject English-dominant user-readable prose lines",
         )
     else:
         testcase.assertGreaterEqual(english_word_count(text), 20, "Expected English user-readable prose")
@@ -263,6 +305,26 @@ Protected:
     (root / f"{case.skill_id}-{default_language.lower()}.md").write_text(body, encoding="utf-8")
 
 
+def write_mixed_language_fixture_output(workspace: Path, case: FileWritingSkillCase) -> None:
+    root = workspace / case.output_root
+    if case.required_path_parts:
+        root = root.joinpath(*case.required_path_parts)
+    root.mkdir(parents=True, exist_ok=True)
+
+    body = f"""# {case.skill_id} mixed-language fixture
+
+Purpose: {case.chinese_markers[0]}并保留当前任务目标。
+Design: The generated document leaves this entire user-readable sentence in English.
+Risks: Another full English paragraph explains tradeoffs, risks, and next steps without Chinese prose.
+Next action: 下一步继续检查语言规则。
+
+Protected:
+{chr(10).join(f"- {term}" for term in case.protected_terms)}
+"""
+
+    (root / f"{case.skill_id}-mixed-language.md").write_text(body, encoding="utf-8")
+
+
 class SkillWrittenFileLanguageTests(unittest.TestCase):
     def test_brainstorming_forward_tests_must_respect_user_approval_gate(self) -> None:
         brainstorming = next(case for case in CASES if case.skill_id == "brainstorming")
@@ -271,6 +333,8 @@ class SkillWrittenFileLanguageTests(unittest.TestCase):
         self.assertIn("Do NOT invoke any implementation skill", text)
         self.assertIn("get user approval", text)
         self.assertIn("Write design doc", text)
+        self.assertIn("Language check", text)
+        self.assertIn("assets/spec-template.zh_CN.md", text)
         self.assertIn("The design has already been approved by the user", PROMPTS[(brainstorming.skill_id, "Chinese", "English")])
 
     def test_all_file_writing_skills_have_prompt_matrix(self) -> None:
@@ -293,10 +357,28 @@ class SkillWrittenFileLanguageTests(unittest.TestCase):
             with self.subTest(skill=case.skill_id):
                 english = (case.skill_path / "SKILL.md").read_text(encoding="utf-8")
                 chinese = (case.skill_path / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+                english_lower = english.lower()
                 self.assertIn(LANGUAGE_RULE_EN, english)
-                self.assertIn("Do not infer", english)
+                self.assertIn("user-readable", english)
+                self.assertIn("do not infer", english_lower)
                 self.assertIn(LANGUAGE_RULE_ZH, chinese)
                 self.assertIn("不要根据任务提示语言推断", chinese)
+
+    def test_file_writing_skills_reference_language_templates(self) -> None:
+        expected_templates = {
+            "record-experiment": ("assets/run-record-template.md", "assets/run-record-template.zh_CN.md"),
+            "writing-plans": ("assets/plan-template.md", "assets/plan-template.zh_CN.md"),
+            "brainstorming": ("assets/spec-template.md", "assets/spec-template.zh_CN.md"),
+            "handoff": ("assets/handoff-template.md", "assets/handoff-template.zh_CN.md"),
+        }
+        for case in CASES:
+            with self.subTest(skill=case.skill_id):
+                english = (case.skill_path / "SKILL.md").read_text(encoding="utf-8")
+                chinese = (case.skill_path / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+                for template in expected_templates[case.skill_id]:
+                    self.assertIn(template, english)
+                    self.assertIn(template, chinese)
+                    self.assertTrue((case.skill_path / template).exists())
 
     def test_fixture_outputs_pass_language_matrix(self) -> None:
         for case in CASES:
@@ -313,6 +395,15 @@ class SkillWrittenFileLanguageTests(unittest.TestCase):
                 with tempfile.TemporaryDirectory() as temp_dir:
                     workspace = Path(temp_dir)
                     write_fixture_output(workspace, case, "English")
+                    with self.assertRaises(AssertionError):
+                        validate_workspace(self, workspace, case, "Chinese")
+
+    def test_mixed_language_fixture_fails_for_chinese_default(self) -> None:
+        for case in CASES:
+            with self.subTest(skill=case.skill_id):
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    workspace = Path(temp_dir)
+                    write_mixed_language_fixture_output(workspace, case)
                     with self.assertRaises(AssertionError):
                         validate_workspace(self, workspace, case, "Chinese")
 

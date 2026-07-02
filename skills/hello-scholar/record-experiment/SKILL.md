@@ -43,18 +43,18 @@ Default record location is under the current task's project root or worktree roo
 - `hello-scholar/memory/experiment-records/INDEX.md`
 - `hello-scholar/memory/experiment-records/runs/<run_id>.md`
 
-Use the templates in:
+Choose templates by repository language preference:
 
-- `assets/index-template.md`
-- `assets/run-record-template.md`
+- Chinese default: `assets/index-template.zh_CN.md` and `assets/run-record-template.zh_CN.md`
+- Otherwise: `assets/index-template.md` and `assets/run-record-template.md`
+
+Do not infer template language from the task prompt when the repository default language is explicit.
 
 If the repository already has an experiment-record convention, use the existing convention and keep the same required fields.
 
 ## Record language
 
-Keep template headings, field names, enum values, paths, commands, file names, code symbols, and technical terms as written.
-
-Write user-readable prose according to the repository language preference. When the repository states a default language, use that default for prose values such as `Purpose`, `Expected signal`, `Failure signal`, `Stop rule`, event observations/actions, `Validity notes`, `Caveats`, and `Next action`. Do not infer prose language from the task prompt when a repository default is explicit.
+Use the selected template's headings and field labels as written. Fill user-readable values in that same template language. Keep enum values, paths, commands, file names, code symbols, tool names, and technical terms as written.
 
 ## Run ID
 
@@ -77,32 +77,7 @@ Use the same run id in log names, result names, checkpoint names, and dashboard 
 
 Before running any experiment command, create or update the run record and the index.
 
-The run record must include these launch fields:
-
-- `Run ID`
-- `Status: planned` or `Status: queued`
-- `Purpose`
-- `Exact command`
-- `CWD`
-- `Script` or `N/A` with reason
-- `Config file` or `N/A` with reason
-- `CLI overrides` or `None`
-- `Seed` or `N/A` with reason
-- `Data version / split` or `N/A` with reason
-- `Preprocessing` or `N/A` with reason
-- `Git branch`
-- `Git commit`
-- `Git dirty status`
-- `Backend`
-- `Machine / GPU`
-- `Python / environment`
-- `Log path`
-- `Checkpoint path`
-- `Result path`
-- `W&B / MLflow / TensorBoard`
-- `Expected signal`
-- `Failure signal`
-- `Stop rule`
+The run record must include every field from the selected run-record template's launch, expected-behavior, and paths sections.
 
 Do not launch if the exact command, cwd, and intended log/result locations are missing.
 

@@ -19,6 +19,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 AGENTS_MD = REPO_ROOT / "AGENTS.md"
 AGENTS_ZH = REPO_ROOT / "AGENTS-zh.md"
 RECORD_EXPERIMENT_SKILL = REPO_ROOT / "skills" / "hello-scholar" / "record-experiment"
+RECORD_EXPERIMENT_ASSETS = RECORD_EXPERIMENT_SKILL / "assets"
 EXPERIMENT_RECORD_ROOT = Path("hello-scholar") / "memory" / "experiment-records"
 
 SKILL_WRITTEN_DOC_PROMPT = f"""请使用 record-experiment skill：{RECORD_EXPERIMENT_SKILL}
@@ -54,14 +55,14 @@ def read_all_run_records(workspace: Path) -> str:
 
 def count_chinese_user_readable_values(text: str) -> int:
     user_readable_labels = (
-        "Purpose",
-        "Expected signal",
-        "Failure signal",
-        "Stop rule",
-        "Preprocessing",
-        "Validity notes",
-        "Caveats",
-        "Next action",
+        "目的",
+        "预期信号",
+        "失败信号",
+        "停止规则",
+        "预处理",
+        "有效性说明",
+        "注意事项",
+        "下一步",
     )
     count = 0
     for label in user_readable_labels:
@@ -80,11 +81,11 @@ def validate_skill_written_language_result(testcase: unittest.TestCase, workspac
     record_text = read_all_run_records(workspace)
 
     for label in (
-        "Run ID",
-        "Exact command",
-        "Data version / split",
-        "Log path",
-        "Result path",
+        "运行 ID",
+        "精确命令",
+        "数据版本 / 划分",
+        "日志路径",
+        "结果路径",
         "W&B / MLflow / TensorBoard",
     ):
         testcase.assertRegex(record_text, rf"(?m)^-\s+{re.escape(label)}\s*:")
@@ -126,14 +127,24 @@ class AgentPreferenceTests(unittest.TestCase):
         english = (RECORD_EXPERIMENT_SKILL / "SKILL.md").read_text(encoding="utf-8")
         chinese = (RECORD_EXPERIMENT_SKILL / "SKILL.zh_CN.md").read_text(encoding="utf-8")
 
-        self.assertIn("Write user-readable prose according to the repository language preference", english)
-        self.assertIn("When the repository states a default language, use that default", english)
-        self.assertIn("Keep template headings, field names, enum values, paths, commands", english)
+        self.assertIn("Choose templates by repository language preference", english)
+        self.assertIn("assets/index-template.zh_CN.md", english)
+        self.assertIn("assets/run-record-template.zh_CN.md", english)
+        self.assertIn("Use the selected template's headings and field labels", english)
 
-        self.assertIn("用户可读正文字段遵循仓库语言偏好", chinese)
-        self.assertIn("当仓库声明默认语言时", chinese)
-        self.assertIn("正文值使用该默认语言", chinese)
-        self.assertIn("模板标题、字段名、枚举值、路径、命令", chinese)
+        self.assertIn("根据仓库语言偏好选择模板", chinese)
+        self.assertIn("assets/index-template.zh_CN.md", chinese)
+        self.assertIn("assets/run-record-template.zh_CN.md", chinese)
+        self.assertIn("使用所选模板中的标题和字段标签", chinese)
+
+        chinese_index = (RECORD_EXPERIMENT_ASSETS / "index-template.zh_CN.md").read_text(encoding="utf-8")
+        chinese_run = (RECORD_EXPERIMENT_ASSETS / "run-record-template.zh_CN.md").read_text(encoding="utf-8")
+        self.assertIn("# 实验记录", chinese_index)
+        self.assertIn("| 运行 ID | 状态 | 目的 |", chinese_index)
+        self.assertIn("# 实验运行：<run_id>", chinese_run)
+        self.assertIn("## 启动记录", chinese_run)
+        self.assertIn("- 精确命令:", chinese_run)
+        self.assertIn("- 后端: local / ssh / vast / modal / queue / other", chinese_run)
 
     def test_skill_written_doc_forward_test_prompt_targets_language_preference(self) -> None:
         self.assertIn(str(RECORD_EXPERIMENT_SKILL), SKILL_WRITTEN_DOC_PROMPT)
@@ -152,9 +163,9 @@ class AgentPreferenceTests(unittest.TestCase):
             (experiment_record_root(workspace) / "INDEX.md").write_text(
                 "\n".join(
                     [
-                        "# Experiment Records",
+                        "# 实验记录",
                         "",
-                        "| run_id | status | purpose | command_digest | seed | data_split | result_path | conclusion | last_updated | next_action |",
+                        "| 运行 ID | 状态 | 目的 | 命令摘要 | 随机种子 | 数据划分 | 结果路径 | 结论 | 最后更新 | 下一步 |",
                         "|---|---|---|---|---|---|---|---|---|---|",
                         "| 20260701-1200-baseline-eval-s0 | planned | baseline eval | `python eval.py` | 0 | test | results/baseline.json | pending | 2026-07-01 | 等待运行 |",
                     ]
@@ -164,18 +175,18 @@ class AgentPreferenceTests(unittest.TestCase):
             (runs_dir / "20260701-1200-baseline-eval-s0.md").write_text(
                 "\n".join(
                     [
-                        "# Experiment Run: 20260701-1200-baseline-eval-s0",
+                        "# 实验运行：20260701-1200-baseline-eval-s0",
                         "",
-                        "- Run ID: 20260701-1200-baseline-eval-s0",
-                        "- Status: planned",
-                        "- Purpose: 比较 test split 上的 baseline retrieval accuracy",
-                        "- Exact command: python eval.py --config configs/baseline.yaml --seed 0 --split test",
-                        "- Data version / split: test",
-                        "- Expected signal: 生成 metrics JSON 文件",
-                        "- Failure signal: crash、缺失 metrics 文件或空结果文件",
-                        "- Stop rule: 结果文件写入后停止",
-                        "- Log path: logs/baseline-eval-s0.log",
-                        "- Result path: results/baseline-eval-s0.json",
+                        "- 运行 ID: 20260701-1200-baseline-eval-s0",
+                        "- 状态: planned",
+                        "- 目的: 比较 test split 上的 baseline retrieval accuracy",
+                        "- 精确命令: python eval.py --config configs/baseline.yaml --seed 0 --split test",
+                        "- 数据版本 / 划分: test",
+                        "- 预期信号: 生成 metrics JSON 文件",
+                        "- 失败信号: crash、缺失 metrics 文件或空结果文件",
+                        "- 停止规则: 结果文件写入后停止",
+                        "- 日志路径: logs/baseline-eval-s0.log",
+                        "- 结果路径: results/baseline-eval-s0.json",
                         "- W&B / MLflow / TensorBoard: N/A",
                     ]
                 ),
