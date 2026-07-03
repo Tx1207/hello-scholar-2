@@ -1,6 +1,6 @@
 ---
 name: record-experiment
-description: 记录实验运行指令和结果。Use before/while/after train, eval, test, benchmark, ablation, reproduction, monitor logs, failed run, or negative result. Hard gate: no persistent experiment record, no launch. Do not use for general work logs, paper claims, figure/table provenance, or literature notes.
+description: 记录实验运行指令和结果。Use before/while/after result-producing research work: train, eval, test, benchmark, model inference/generation/prediction, ablation, reproduction, monitoring, failed or negative runs, and reports derived from existing results. Includes loading checkpoint/model to produce model outputs. Hard gate: no persistent experiment record, no launch.
 ---
 
 # record-experiment
@@ -26,15 +26,22 @@ Use this skill for result-producing research commands, including:
 
 - training runs
 - evaluation / test / benchmark commands
+- model inference, generation, and prediction commands
 - ablations and sweeps
 - baseline reproduction
 - reruns
 - log monitoring
 - failed runs
 - valid negative results
-- summaries of experiment results
+- summaries or reports derived from experiment result files
 
 Do not use this skill for ordinary coding tasks, general work logs, literature notes, paper claim ledgers, figure/table provenance, or broad research-memory systems.
+
+## Model outputs and derived artifacts
+
+Any command that loads a model/checkpoint and writes research outputs is an experiment command, even if the user calls it "process data" or "generate outputs". Create the run record before launching it.
+
+For reports or other derived artifacts made from existing outputs, link provenance: put consumed files in `Input artifacts`, the producing run in `Upstream run ID`, and new files in `Derived artifacts`. If the upstream record is missing, create a retroactive one with known facts and `Unknown` for missing launch details.
 
 ## Storage
 
@@ -150,16 +157,19 @@ A negative result means the experiment ran validly but did not support the purpo
 - Do not claim a run completed without log or result evidence.
 - Do not claim tests/evals passed without recording the command and observed result.
 - Do not overwrite a previous run record with a changed command, config, seed, data split, or eval setting; create a new run id or explicitly mark the record as a mutation/rerun.
+- Do not record only a downstream report when the upstream result has no run record.
+- Do not write `N/A` for `Upstream run ID` when the current command consumes prior experiment outputs.
 - Do not record only successful runs.
 - Do not turn this skill into a claim ledger, data provenance system, figure/table provenance system, or literature map.
 
 ## Minimal procedure
 
-1. Identify whether the user is about to launch, monitor, fail, stop, or summarize an experiment.
+1. Identify whether the user is about to launch, monitor, fail, stop, summarize, run model inference/generation/prediction, or create a report from experiment outputs.
 2. Find or create the run record under the current task's project or worktree root at `hello-scholar/memory/experiment-records/runs/`.
 3. Ensure the launch hard-gate fields are present before launch.
-4. Update `hello-scholar/memory/experiment-records/INDEX.md` under that same root with one row for the run.
-5. Append monitoring, failure, and result events as they happen.
-6. Finalize status, metrics, conclusion, and next action after the run ends.
+4. For derived artifacts, link `Input artifacts`, `Upstream run ID`, and `Derived artifacts`.
+5. Update `hello-scholar/memory/experiment-records/INDEX.md` under that same root with one row for each run.
+6. Append monitoring, failure, and result events as they happen.
+7. Finalize status, metrics, conclusion, and next action after the run ends.
 
 See `references/status-and-fields.md` for field definitions and `references/examples.md` for compact examples.

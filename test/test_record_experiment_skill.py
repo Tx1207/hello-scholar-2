@@ -42,6 +42,9 @@ REQUIRED_LAUNCH_LABELS = (
     "Seed",
     "Data version / split",
     "Preprocessing",
+    "Input artifacts",
+    "Upstream run ID",
+    "Derived artifacts",
     "Git branch",
     "Git commit",
     "Git dirty status",
@@ -84,6 +87,9 @@ REQUIRED_LAUNCH_LABELS_ZH = (
     "随机种子",
     "数据版本 / 划分",
     "预处理",
+    "输入产物",
+    "上游运行 ID",
+    "派生产物",
     "Git 分支",
     "Git 提交",
     "Git 工作区状态",
@@ -122,6 +128,9 @@ FORBIDDEN_FIELD_LABELS = (
     "data_version_or_split",
     "data_version",
     "data_split",
+    "input_artifacts",
+    "upstream_run_id",
+    "derived_artifacts",
     "git_branch",
     "git_commit",
     "git_dirty_status",
@@ -153,6 +162,8 @@ class Scenario:
     require_unknown: bool = False
     require_dashboard: bool = False
     expect_not_launched: bool = False
+    min_run_records: int = 1
+    required_regex: tuple[str, ...] = ()
 
 
 def prompt(body: str) -> str:
@@ -210,6 +221,64 @@ SCENARIOS: dict[str, Scenario] = {
         ),
         required_text=("python eval.py", "configs/router.yaml", "wandb.ai"),
         require_dashboard=True,
+    ),
+    "checkpoint_model_inference_prelaunch": Scenario(
+        "checkpoint_model_inference_prelaunch",
+        "Model inference from a checkpoint is an experiment launch",
+        prompt(
+            """
+            Use the final checkpoint to run predictions on this held-out shard
+            with the same training-time preprocessing:
+
+            python scripts/infer.py --checkpoint checkpoints/final.pt \
+              --input data/holdout.jsonl --out outputs/predictions.jsonl \
+              --device cuda:0 --dtype bf16 --batch-size 8
+
+            Prepare the persistent experiment record before launch.
+            """
+        ),
+        required_text=(
+            "python scripts/infer.py",
+            "--checkpoint",
+            "--device cuda:0",
+            "outputs/predictions.jsonl",
+        ),
+        expected_status="planned",
+        expected_conclusion="pending",
+    ),
+    "derived_report_requires_upstream_record": Scenario(
+        "derived_report_requires_upstream_record",
+        "HTML report from existing JSONL must link to upstream inference",
+        prompt(
+            """
+            I already have these prediction result files, but there is no local
+            experiment record for how they were produced:
+
+            outputs/model_a_predictions.jsonl
+            outputs/model_b_predictions.jsonl
+
+            Create a lightweight HTML comparison report at:
+            outputs/prediction_comparison_report.html
+
+            Record the report work and preserve the upstream run
+            provenance even if some upstream facts are unknown.
+            """
+        ),
+        required_text=(
+            "model_a_predictions.jsonl",
+            "model_b_predictions.jsonl",
+            "prediction_comparison_report.html",
+            "Upstream run ID",
+            "Input artifacts",
+            "Derived artifacts",
+        ),
+        require_unknown=True,
+        min_run_records=2,
+        required_regex=(
+            r"(?im)^-\s+Upstream run ID\s*:\s*(?!N/A\b|None\b|unknown\b|$).+",
+            r"(?im)^-\s+Input artifacts\s*:.*jsonl",
+            r"(?im)^-\s+Derived artifacts\s*:.*html",
+        ),
     ),
     "retroactive_record_unknowns": Scenario(
         "retroactive_record_unknowns",
@@ -323,10 +392,10 @@ def assert_index_has_run_row(testcase: unittest.TestCase, workspace: Path) -> No
     testcase.assertGreaterEqual(lines.__len__(), 3, "Index must include at least one run row")
 
 
-def assert_records_exist(testcase: unittest.TestCase, workspace: Path) -> str:
+def assert_records_exist(testcase: unittest.TestCase, workspace: Path, min_records: int = 1) -> str:
     assert_index_has_run_row(testcase, workspace)
     records = run_record_paths(workspace)
-    testcase.assertGreaterEqual(records.__len__(), 1, "Expected at least one run record")
+    testcase.assertGreaterEqual(records.__len__(), min_records, f"Expected at least {min_records} run record(s)")
     return read_all_run_records(workspace)
 
 
@@ -356,6 +425,14 @@ def assert_no_snake_case_labels(testcase: unittest.TestCase, text: str) -> None:
 def assert_contains_all(testcase: unittest.TestCase, text: str, terms: tuple[str, ...]) -> None:
     for term in terms:
         testcase.assertIn(term, text)
+
+
+def skill_description(path: Path) -> str:
+    text = path.read_text(encoding="utf-8")
+    match = re.search(r"(?ms)^---\s*\n.*?^description:\s*(.*?)\n---", text)
+    if not match:
+        raise AssertionError(f"Missing frontmatter description in {path}")
+    return match.group(1)
 
 
 def assert_status(testcase: unittest.TestCase, text: str, status: str) -> None:
@@ -403,7 +480,7 @@ def validate_scenario_result(
         assert_no_records_exist(testcase, workspace)
         return
 
-    record_text = assert_records_exist(testcase, workspace)
+    record_text = assert_records_exist(testcase, workspace, min_records=scenario.min_run_records)
     combined_text = f"{response_text}\n\n{record_text}"
 
     assert_required_labels(testcase, record_text)
@@ -421,6 +498,8 @@ def validate_scenario_result(
         testcase.assertIn("wandb.ai", combined_text)
     if scenario.expect_not_launched:
         assert_not_launched(testcase, workspace, record_text)
+    for pattern in scenario.required_regex:
+        testcase.assertRegex(record_text, pattern)
 
 
 def write_index(workspace: Path, run_id: str, status: str, conclusion: str) -> None:
@@ -452,6 +531,9 @@ def write_run_record(
     extra_notes: str = "",
     evidence: str = "",
     launched: bool = True,
+    input_artifacts: str = "N/A",
+    upstream_run_id: str = "N/A",
+    derived_artifacts: str = "N/A",
 ) -> None:
     runs_dir(workspace).mkdir(parents=True, exist_ok=True)
     end_time = "2026-07-01 12:05" if launched else "N/A"
@@ -487,6 +569,9 @@ def write_run_record(
 - Seed: 0
 - Data version / split: test
 - Preprocessing: N/A
+- Input artifacts: {input_artifacts}
+- Upstream run ID: {upstream_run_id}
+- Derived artifacts: {derived_artifacts}
 - Git branch: main
 - Git commit: abc1234
 - Git dirty status: clean
@@ -536,6 +621,19 @@ def write_run_record(
 
 
 class RecordExperimentSkillStaticTests(unittest.TestCase):
+    def test_skill_description_covers_model_runs_and_outputs(self) -> None:
+        english = skill_description(SKILL_MD)
+        chinese = skill_description(SKILL_ZH)
+
+        for term in ("inference", "generation", "prediction", "checkpoint", "model output"):
+            self.assertIn(term, english.lower())
+        for term in ("推理", "生成", "模型输出", "checkpoint"):
+            self.assertIn(term, chinese)
+        for overfit_term in ("caption", "captions", "media"):
+            self.assertNotIn(overfit_term, english.lower())
+        for overfit_term in ("caption", "视频"):
+            self.assertNotIn(overfit_term, chinese)
+
     def test_main_skill_files_do_not_embed_pressure_test_scenarios(self) -> None:
         for path in (SKILL_MD, SKILL_ZH):
             text = path.read_text(encoding="utf-8")
@@ -582,6 +680,8 @@ class RecordExperimentScenarioHarnessTests(unittest.TestCase):
                 "prelaunch_hard_gate",
                 "user_urgency_pressure",
                 "dashboard_still_needs_local_record",
+                "checkpoint_model_inference_prelaunch",
+                "derived_report_requires_upstream_record",
                 "retroactive_record_unknowns",
                 "failed_run_record",
                 "negative_result_record",
@@ -623,7 +723,34 @@ class RecordExperimentScenarioHarnessTests(unittest.TestCase):
                             extra_notes=notes,
                             evidence=" ".join(scenario.required_text),
                             launched=not scenario.expect_not_launched,
+                            input_artifacts="; ".join(
+                                term for term in scenario.required_text if term.endswith((".jsonl", ".txt"))
+                            )
+                            or "N/A",
+                            upstream_run_id=(
+                                "20260701-1150-upstream-inference"
+                                if scenario.min_run_records > 1
+                                else "N/A"
+                            ),
+                            derived_artifacts="; ".join(
+                                term for term in scenario.required_text if term.endswith((".html", ".zip", ".json"))
+                            )
+                            or "N/A",
                         )
+                        if scenario.min_run_records > 1:
+                            write_run_record(
+                                workspace,
+                                run_id="20260701-1150-upstream-inference",
+                                command="python scripts/infer.py --out outputs/source_predictions.jsonl",
+                                status="completed",
+                                final_status="completed",
+                                conclusion="pending",
+                                extra_notes="Unknown upstream launch details",
+                                evidence="upstream inference record",
+                                input_artifacts="source dataset",
+                                upstream_run_id="N/A",
+                                derived_artifacts="outputs/source_predictions.jsonl",
+                            )
                     validate_scenario_result(self, scenario.scenario_id, workspace)
 
     def test_missing_local_record_fails_dashboard_scenario(self) -> None:

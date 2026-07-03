@@ -44,3 +44,14 @@ Conclusion:
 - Negative result: yes
 - Caveats: single seed only
 - Next action: do not promote this ablation; optionally rerun with seeds 0, 1, 2 if needed
+
+## Example 4: derived report with missing upstream record
+
+Before generating `reports/prediction_comparison.html` from existing result files:
+
+- Create a retroactive upstream run record for the model run if none exists.
+- Use `Unknown` for missing launch facts such as exact start time or git commit.
+- In the report run record:
+  - `Input artifacts`: `outputs/model_a_predictions.jsonl`; `outputs/model_b_predictions.jsonl`
+  - `Upstream run ID`: `20260703-0312-model-inference`
+  - `Derived artifacts`: `reports/prediction_comparison.html`; `reports/prediction_comparison.zip`

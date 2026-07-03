@@ -20,6 +20,9 @@
 - Seed:
 - Data version / split:
 - Preprocessing:
+- Input artifacts:
+- Upstream run ID:
+- Derived artifacts:
 - Git branch:
 - Git commit:
 - Git dirty status:

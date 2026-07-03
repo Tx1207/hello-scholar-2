@@ -1,6 +1,6 @@
 ---
 name: record-experiment
-description: 记录实验运行指令和结果。在训练、评估、测试、benchmark、消融、复现、监控日志、失败运行或负结果的前中后使用。硬门槛：没有持久化实验记录，就不要启动实验。不要用于普通工作日志、论文 claim、图表溯源或文献笔记。
+description: 记录实验运行指令和结果。在训练、评估、测试、benchmark、模型推理/生成/prediction、消融、复现、监控、失败或负结果、基于既有结果生成报告前中后使用。包括加载 checkpoint/model 产生模型输出。硬门槛：没有持久化实验记录，就不要启动实验。
 ---
 
 # record-experiment
@@ -26,15 +26,22 @@ description: 记录实验运行指令和结果。在训练、评估、测试、b
 
 - 训练运行
 - evaluation / test / benchmark 命令
+- 模型推理、生成和 prediction 命令
 - 消融和 sweep
 - baseline 复现
 - 重跑
 - 日志监控
 - 失败运行
 - 有效负结果
-- 实验结果摘要
+- 基于实验结果文件生成的摘要或报告
 
 不要把这个 skill 用于普通编码任务、通用工作日志、文献笔记、论文 claim ledger、图表溯源，或宽泛的 research-memory 系统。
+
+## 模型输出和派生产物
+
+任何加载 model/checkpoint 并写出科研输出的命令都是实验命令，即使用户把它称为“处理数据”或“生成输出”。启动前必须先创建 run record。
+
+如果基于既有输出生成报告或其他派生产物，必须保留 provenance：`输入产物` 写被消费的文件，`上游运行 ID` 写产出这些文件的 run，`派生产物` 写新文件。若缺上游记录，创建追溯记录；已知事实照实写，缺失启动细节写 `Unknown`。
 
 ## 存储
 
@@ -150,16 +157,19 @@ run record 必须包含所选 run-record 模板中“启动记录”“预期行
 - 不要在没有日志或结果证据的情况下声称运行已完成。
 - 不要在没有记录命令和观察结果的情况下声称 tests/evals 通过。
 - 不要用变更后的命令、配置、seed、数据划分或 eval 设置覆盖旧 run record；创建新的 run id，或明确标记该记录是 mutation/rerun。
+- 当上游结果没有 run record 时，不要只记录下游报告。
+- 当前命令消费既有实验输出时，不要把 `上游运行 ID` 写成 `N/A`。
 - 不要只记录成功运行。
 - 不要把这个 skill 变成 claim ledger、data provenance system、figure/table provenance system 或 literature map。
 
 ## 最小流程
 
-1. 判断用户是否即将启动、监控、失败处理、停止或总结一个实验。
+1. 判断用户是否即将启动、监控、失败处理、停止、总结实验、运行模型推理/生成/prediction，或基于实验输出创建报告。
 2. 在当前任务的项目根目录或 worktree 根目录下的 `hello-scholar/memory/experiment-records/runs/` 查找或创建 run record。
 3. 启动前确保硬门槛字段齐全。
-4. 在同一根目录下的 `hello-scholar/memory/experiment-records/INDEX.md` 中为该 run 更新一行。
-5. 随着监控、失败和结果事件发生，持续追加记录。
-6. 运行结束后，最终确定 status、metrics、conclusion 和 next action。
+4. 对派生产物，链接 `输入产物`、`上游运行 ID` 和 `派生产物`。
+5. 在同一根目录下的 `hello-scholar/memory/experiment-records/INDEX.md` 中为每个 run 更新一行。
+6. 随着监控、失败和结果事件发生，持续追加记录。
+7. 运行结束后，最终确定 status、metrics、conclusion 和 next action。
 
 字段定义见 `references/status-and-fields.md`，紧凑示例见 `references/examples.md`。

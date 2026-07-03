@@ -15,6 +15,9 @@ These fields must exist before an experiment command is launched:
 - `Seed` or `N/A` with reason
 - `Data version / split` or `N/A` with reason
 - `Preprocessing` or `N/A` with reason
+- `Input artifacts` or `N/A` with reason
+- `Upstream run ID` or `N/A` with reason
+- `Derived artifacts` or `N/A` with reason
 - `Git branch`
 - `Git commit`
 - `Git dirty status`
@@ -30,6 +33,7 @@ These fields must exist before an experiment command is launched:
 - `Stop rule`
 
 Do not launch if `Exact command`, `CWD`, and intended log/result locations are missing.
+Do not launch or generate a derived report from existing experiment outputs unless `Input artifacts` and `Upstream run ID` are filled, or a retroactive upstream record has been created with missing facts marked `Unknown`.
 
 ## Status values
 
@@ -59,3 +63,4 @@ Do not launch if `Exact command`, `CWD`, and intended log/result locations are m
 - Record concise metric values and short error excerpts only when useful.
 - Mark missing evidence explicitly as `Unknown`, `Not run`, or `Pending`.
 - Never infer metrics from memory.
+- For derived artifacts, preserve provenance by linking the upstream run id and listing both consumed input files and newly written report artifacts.
