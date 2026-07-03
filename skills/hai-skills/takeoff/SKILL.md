@@ -101,11 +101,11 @@ These are the failure modes that keep an answer small. Each gets countered by th
 
 6. **Give 2-3 options only if they materially differ**, using the canonical labels: Conservative path / Clean target / Staged clean path. Recommend one.
 
-7. **Bring it back to execution.** Identify the first irreversible decision, the first proof point, what would falsify the thesis, and what not to spend time on.
+7. **Bring it back to execution.** Identify the first irreversible decision, the first proof point, what would falsify the thesis, and what not to spend time on. If the bold direction now needs feasibility pressure-testing, ask the user whether to route to `landing`. Do not route directly from `takeoff` to `brainstorming`.
 
 ## Output
 
-Produce a 格局判断 with these sections (see `references/output-template.md` for the copy-pasteable skeleton — read it before finalizing):
+Produce a 格局判断. For substantial answers, use these sections; for short dialogue, keep the same judgment content without turning the response into a document:
 
 - **Thesis** — sharp, high-leverage, in 1-3 sentences; not presented as guaranteed truth.
 - **Confidence** — level (high / medium / low) plus why not certain.
@@ -126,10 +126,6 @@ Output discipline that the sections do not already enforce:
 - Do not preserve backward compatibility by default — treat every shim as debt that must name a real contract to survive.
 - Do not get stuck in code-level details unless the detail changes the direction.
 - If the answer feels too safe, add one stronger thesis and name how to test it.
-
-## Use a different skill when
-
-- The bold direction is chosen and now needs feasibility / landing pressure-testing — use `landing` to make it executable and de-risk landing. `takeoff` and `landing` are a paired stance: `takeoff` opens the frame, `landing` puts it on the ground.
 
 ## What this skill is NOT
 
