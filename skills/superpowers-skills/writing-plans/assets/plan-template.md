@@ -4,6 +4,12 @@
 
 **Goal:** [One sentence describing what this builds]
 
+**Spec Source:** [Path to the spec/design/PRD/issue that is the behavior source of truth, or "None provided"]
+
+**Source-of-Truth Rule:** Spec defines behavior, boundaries, invariants, and acceptance; plan defines execution. If they conflict, stop and ask before coding.
+
+**Scope Boundary:** [Full spec, or the covered subset plus deferred spec sections]
+
 **Architecture:** [2-3 sentences about the approach]
 
 **Tech Stack:** [Key technologies/libraries]
@@ -26,6 +32,14 @@
 **Files:**
 - Modify: `path/to/file`
 - Test: `tests/path/to/test_file.py`
+
+**Spec Coverage:**
+- Spec sections: [Exact source headings, requirement IDs, or line-linked bullets]
+- Acceptance gates:
+  - [Behavior or invariant this task must satisfy]
+  - [Error, regression, disabled-path, or integration contract]
+- Out of scope:
+  - [Related work intentionally deferred]
 
 - [ ] **Step 1: Write the failing test**
 
@@ -61,7 +75,9 @@ git commit -m "feat: add specific feature"
 
 ## Self-Review Notes
 
-- Spec coverage: [What requirement each task covers]
+- Source-of-truth: [Spec source named/conflict rule present, scope boundary explicit if narrowed, or no spec provided]
+- Spec coverage: [Each spec requirement maps to a task and acceptance gate]
+- Contract preservation: [Regression checks for affected behavior, disabled paths, errors, APIs, data, integrations]
 - Simplicity check: [Why this is the minimum useful change]
 - Risk check: [Known risk and mitigation]
 

@@ -27,6 +27,12 @@ Choose the plan template by repository language preference:
 
 Use the selected template's headings and field labels as written. Fill user-readable prose in that same template language. Keep paths, commands, code identifiers, skill names, and technical terms as written.
 
+## Source-of-Truth Gate
+
+If a spec, PRD, design doc, issue, or approved requirement exists, the plan must include `Spec Source`; otherwise write `Spec Source: None provided` and name the user request/discovered requirements serving as contract. The spec defines behavior, boundaries, invariants, and acceptance. The plan defines files, order, tests, and commands. On conflict, the executor stops and asks. Do not rely on the executor to discover the spec.
+
+If the plan intentionally implements only a subset of a broader spec, add `Scope Boundary`: covered subset plus deferred spec sections. Unstated scope narrowing is a plan failure.
+
 ## Scope Check
 
 If the spec covers multiple independent subsystems, it should have been broken into sub-project specs during brainstorming. If it wasn't, suggest breaking this into separate plans — one per subsystem. Each plan should produce working, testable software on its own.
@@ -55,6 +61,8 @@ This structure informs the task decomposition. Each task should produce self-con
 
 Read the selected template before writing the plan, then replace every placeholder with concrete task-specific content. Keep the template's structure unless the user supplied a stronger format requirement.
 
+Before steps, each code-changing task must include `Spec Coverage`: `Spec sections` (exact headings, IDs, or line-linked bullets), `Acceptance gates` (behaviors, invariants, errors, regressions, disabled paths), and `Out of scope` (deferred adjacent work). No coverage/gates means the task is not executable.
+
 ## No Placeholders
 
 Every step must contain the actual content an engineer needs. These are **plan failures** — never write them:
@@ -64,6 +72,10 @@ Every step must contain the actual content an engineer needs. These are **plan f
 - "Similar to Task N" (repeat the code — the engineer may be reading tasks out of order)
 - Steps that describe what to do without showing how (code blocks required for code steps)
 - References to types, functions, or methods not defined in any task
+- Missing `Spec Source` when a spec/design/PRD exists
+- Unstated scope narrowing when the plan covers only part of a broader spec
+- Generic `Spec coverage: covered` without task-to-spec mapping
+- Acceptance criteria that only say "tests pass"
 
 ## Remember
 - Exact file paths always
@@ -75,11 +87,15 @@ Every step must contain the actual content an engineer needs. These are **plan f
 
 After writing the complete plan, look at the spec with fresh eyes and check the plan against it. This is a checklist you run yourself — not a subagent dispatch.
 
-**1. Spec coverage:** Skim each section/requirement in the spec. Can you point to a task that implements it? List any gaps.
+**1. Source-of-truth:** Is the spec/design/PRD path named, or is `None provided` justified? Does spec win on conflict? If scope is narrower than spec, is the boundary explicit?
 
-**2. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them.
+**2. Spec coverage:** Can every spec requirement point to a task and acceptance gate? Fix or list gaps.
 
-**3. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
+**3. Contract preservation:** Are affected existing behavior, disabled paths, errors, persisted data, APIs, and integrations covered by regression checks?
+
+**4. Placeholder scan:** Search your plan for red flags — any of the patterns from the "No Placeholders" section above. Fix them.
+
+**5. Type consistency:** Do the types, method signatures, and property names you used in later tasks match what you defined in earlier tasks? A function called `clearLayers()` in Task 3 but `clearFullLayers()` in Task 7 is a bug.
 
 If you find issues, fix them inline. No need to re-review — just fix and move on. If you find a spec requirement with no task, add the task.
 
