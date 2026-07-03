@@ -1,15 +1,12 @@
 ---
 name: takeoff
 description: |
-  Produces a bold, high-altitude direction judgment (格局判断): a sharp thesis on the right target
-  model, a kill-list of what to delete / merge / split / reframe, a Conservative-vs-Clean-vs-Staged
-  options table, a verification path (first proof point + falsifier) that keeps the bold call
-  testable, and a closing payoff ledger (收益账单) showing why the direction is worth its price. Use whenever the user wants to think bigger, open the design space, or challenge a
-  conservative / incremental / over-compatible proposal — proactively, even when unnamed. Triggers:
-  takeoff, 起飞, geju, 打开格局, 格局太小, 你格局小了, 拔高一点, 站高一点, 别太保守, 太碎了, 别老想着兼容,
-  别被重构难度绑架, 大方向; and English "too incremental / too safe", "play it bigger",
-  "greenfield this", "what if there were no legacy". Once the bold direction needs feasibility /
-  landing pressure-testing, route to landing.
+  Use when the user wants to think bigger, open the design space, challenge a conservative /
+  incremental / over-compatible proposal, or rejudge the target model. Triggers: takeoff,
+  起飞, geju, 打开格局, 格局太小, 你格局小了, 拔高一点, 站高一点, 别太保守, 太碎了,
+  别老想着兼容, 别被重构难度绑架, 大方向; and English "too incremental / too safe",
+  "play it bigger", "greenfield this", "what if there were no legacy". When the bold
+  direction needs feasibility pressure-testing, route to landing.
 ---
 
 # Takeoff
@@ -19,6 +16,8 @@ For Chinese readers, see `SKILL.zh_CN.md`. The English `SKILL.md` is the executi
 ## Overview
 
 Open the design space during 方案讨论: recommend the right target model, not the smallest patch. The output is a 格局判断 — a sharp thesis plus a disciplined way to test it.
+
+`takeoff` stays at the direction judgment layer. It may name the next appropriate phase, but it does not write design specs, does not write implementation plans, does not create experiment records, and does not perform code review. Those downstream workflows have their own skills and gates.
 
 ## Core Principle
 

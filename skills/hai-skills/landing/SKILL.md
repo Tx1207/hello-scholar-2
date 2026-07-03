@@ -14,6 +14,8 @@ Use this skill after `takeoff` (formerly `geju`) or when the user explicitly ask
 
 Use `landing` only when a prior bold direction exists. Without that prior frame, do not force this structure; choose the workflow that matches the user's actual request.
 
+For `landing`, valid input must name the bold thesis, the old model it replaces, and the main reality question that could break it. If those are missing, do not run the landing template; answer the ordinary question or ask for the missing direction first.
+
 This skill is not about being timid, conservative, or anti-refactor. It is about making the chosen direction survivable, verifiable, reversible where possible, and useful in the next concrete step.
 
 ## Core Principle
@@ -41,7 +43,7 @@ If there is no prior bold target from `takeoff`, a takeoff-like architecture dis
 
 ## Workflow
 
-1. Restate the bold direction in one sentence. Do not flatten the ambition. Name where it came from — `takeoff`, a takeoff-like architecture review, or the user's explicit request to run `landing`. If there is no already-opened bold direction, stop using this template.
+1. Restate the bold direction in one sentence. Do not flatten the ambition. Name where it came from — `takeoff`, a takeoff-like architecture review, or the user's explicit request to run `landing`. If there is no already-opened bold direction, or if the bold thesis / old model / main reality question cannot be stated, stop using this template.
 
 2. Run a reality check. Scan for the five anti-patterns, then name the constraints they expose:
    - **Vision without first step** — sounds right, but nobody knows what to do this afternoon.

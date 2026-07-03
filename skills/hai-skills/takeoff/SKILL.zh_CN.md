@@ -1,12 +1,9 @@
 ---
 name: takeoff
 description: |
-  产出一份大胆的高位方向判断（格局判断）：对正确目标模型的尖锐 thesis、一份 kill-list（该删 /
-  该合 / 该拆 / 该重塑什么）、一张「保守 vs 干净 vs 分阶段」选项表、一条让大胆判断保持可验证的
-  验证路径（首个证明点 + 证伪条件），以及收尾的一张收益账单，讲清这个方向为什么值得它的代价。当用户想 think bigger、打开设计空间，或挑战保守 / 渐进 /
-  过度兼容的方案时使用——即使没点名也要主动触发。触发词：takeoff、起飞、geju、打开格局、格局太小、你格局小了、拔高一点、
-  站高一点、别太保守、太碎了、别老想着兼容、别被重构难度绑架、大方向；以及英文 "too incremental /
-  too safe"、"play it bigger"、"greenfield this"、"what if there were no legacy"。
+  当用户想 think bigger、打开设计空间、挑战保守 / 渐进 / 过度兼容的方案，或重新判断目标模型时使用——即使没点名也要主动触发。
+  触发词：takeoff、起飞、geju、打开格局、格局太小、拔高一点、站高一点、别太保守、别老想着兼容、
+  别被重构难度绑架、大方向；以及 "too incremental / too safe"、"greenfield this"。当大胆方向需要可行性压力测试时，转给 landing。
 ---
 
 # Takeoff / 起飞
@@ -16,6 +13,8 @@ description: |
 ## 概览
 
 在方案讨论时打开设计空间：推荐正确的目标模型，而不是最小补丁。输出是一份格局判断——一个尖锐的 thesis，加上一套验证它的方法。
+
+`takeoff` 停在方向判断层。它可以点名下一阶段应该去哪里，但不写设计 spec，不写 implementation plan，不创建 experiment record，也不做 code review。下游流程有自己的 skill 和 gate。
 
 ## 核心原则
 

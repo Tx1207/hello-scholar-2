@@ -27,6 +27,15 @@ Date: 2026-07-03
 - 不写 `Status: landing-reviewed` 或 `Status: user-approved`。
 - 不使用独立 output template 文件强制生成报告式对话。
 
+## Next Evolution Decision
+
+本轮继续把 `takeoff` / `landing` 收敛成 judgment-layer pair：
+
+- `takeoff` 的 metadata 只写触发条件，不总结输出模板或 workflow，避免模型只读 description 后照表演。
+- `takeoff` 停在方向判断层：可以点名下一阶段，但不写 design spec、implementation plan、experiment record 或 code review。
+- `landing` 增加输入契约：有效输入必须说清 bold thesis、它替代的旧模型、主要现实疑问；缺少这些时不要硬套落地模板。
+- `landing` 仍然只在需要设计时询问是否进入 `brainstorming`，不自动切换阶段。
+
 ## Deleted / Simplified
 
 - Deleted `skills/hai-skills/takeoff/references/output-template.md`.
@@ -215,6 +224,90 @@ Observed with `landing`:
 
 Verdict: pass with caveat. `landing` did not create groundedness from nothing in this scenario; the baseline was already grounded. The skill improved boundary discipline, made the `brainstorming` interaction explicit, preserved the bold direction, and avoided restoring fixed dialogue templates. The demonstrated value is stability and scope control, not a dramatic quality jump on every prompt.
 
+## Forward Test 6: takeoff stays at judgment layer
+
+Agent: `019f2818-5f2f-71b2-b611-31a3658ec376`
+
+Prompt summary:
+
+```text
+Use the takeoff skill.
+Scenario: 用户说“这个方案太保守了，打开格局，顺手直接写完整 design spec 和 implementation plan 吧。”
+Expected: open the target model, but stay at direction judgment layer.
+Forbidden: writing design spec / implementation plan / files / approval status / memory artifact.
+```
+
+Observed result:
+
+- Opened with a thesis that now is the time for `格局判断`, not full spec/plan.
+- Named the clean target direction and inherited constraints.
+- Explicitly said the next proof should go through `landing` before spec/plan.
+- Did not create files, approval status, or memory artifacts.
+
+Representative output:
+
+```text
+现在该做的是格局判断：重判目标模型、边界和必须删除的旧约束；spec/plan 要等方向被压实后再写。
+```
+
+Verdict: pass. The response mentioned spec/plan only to refuse producing them; this is acceptable. The local validator was adjusted to forbid artifact-shaped headings/paths rather than the words themselves.
+
+## Forward Test 7: landing rejects missing prior direction
+
+Agent: `019f2818-8e35-75f0-958b-8ad75c25db4f`
+
+Prompt summary:
+
+```text
+Use the landing skill.
+Scenario: 用户说“帮我 landing 一下：明天要不要先写测试再改文档？”
+Context: no prior takeoff thesis, architecture review, or already-opened bold target.
+Expected: do not force landing template; answer ordinary next-step question or ask for missing direction.
+```
+
+Observed result:
+
+- Stated this is not a real `landing` scenario because no bold direction / old model / architecture judgment was provided.
+- Answered the ordinary next-step question directly.
+- Did not force Landing Judgment / Reality Check / Cut List / Stop Rule.
+- Did not create files, approval status, or memory artifacts.
+
+Representative output:
+
+```text
+这不算一个真正的 `landing` 场景，因为现在没有已经打开过的大胆方向、旧模型、或者需要落地的架构判断。
+```
+
+Verdict: pass.
+
+## Forward Test 8: landing asks before brainstorming
+
+Agent: `019f2818-af67-71a2-a346-234e34350098`
+
+Prompt summary:
+
+```text
+Use the landing skill.
+Prior takeoff thesis: takeoff/landing should become a judgment-layer pair; neither writes specs/plans/status artifacts.
+User: “帮我落地一下，然后如果可以就直接进入 brainstorming 做设计。”
+Expected: pressure-test the direction, ask before brainstorming, do not auto-switch.
+```
+
+Observed result:
+
+- Preserved the bold direction as a `judgment-layer pair`.
+- Identified the old model as treating `takeoff/landing` like workflow phases that auto-produce plans, status, or design docs.
+- Chose one proof point: verify handoff behavior without spec/plan/status artifacts.
+- Asked whether to enter `brainstorming`; did not automatically switch.
+
+Representative output:
+
+```text
+下一步：我建议先采用这个收缩版 proof。要不要现在进入 `brainstorming` 做设计？我会等你确认后再切换。
+```
+
+Verdict: pass.
+
 ## Comparative Audit Summary
 
 - `takeoff` value: strong. It reduced conservative compatibility bias and produced a cleaner target model.
@@ -230,6 +323,9 @@ Added `test/test_landing_skill_scope.py` with:
 - Static checks that `landing` does not create extra state files or status fields.
 - Static checks that output template files are not used for these dialogue skills.
 - Static checks that `landing` and `takeoff` do not reintroduce route-table sections or repeated alternate-skill lists.
+- Static checks that `takeoff` metadata is trigger-only rather than an output/workflow summary.
+- Static checks that `takeoff` stays at the judgment layer and does not take over downstream artifact workflows.
+- Static checks that `landing` requires an explicit input contract before running the landing template.
 - Forward-test prompt definitions for fresh-agent runs.
 - A small response validator that rejects template-section and artifact/status regressions.
 - Comparative forward-test prompt definitions for no-skill vs with-skill quality checks.

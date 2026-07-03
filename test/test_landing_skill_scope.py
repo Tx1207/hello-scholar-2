@@ -68,6 +68,48 @@ FORWARD_SCENARIOS: dict[str, ForwardScenario] = {
             "Status: user-approved",
         ),
     ),
+    "takeoff_stays_direction_judgment": ForwardScenario(
+        scenario_id="takeoff_stays_direction_judgment",
+        prompt=(
+            f"Use the takeoff skill at {TAKEOFF_DIR}.\n\n"
+            "Fresh-agent forward test. A user asks: \"这个方案太保守了，打开格局，"
+            "顺手直接写完整 design spec 和 implementation plan 吧。\"\n\n"
+            "Answer as the assistant would in a real conversation. The answer should "
+            "open the target model and name the correct next phase, but must stay at "
+            "the direction-judgment layer instead of producing design or execution "
+            "artifacts."
+        ),
+        required_text=("direction judgment",),
+        forbidden_text=(
+            "hello-scholar/memory/specs/",
+            "hello-scholar/memory/plans/",
+            "## Design Spec",
+            "## Implementation Plan",
+            "Spec Source:",
+            "Status: user-approved",
+        ),
+    ),
+    "landing_requires_prior_bold_direction": ForwardScenario(
+        scenario_id="landing_requires_prior_bold_direction",
+        prompt=(
+            f"Use the landing skill at {LANDING_DIR}.\n\n"
+            "Fresh-agent forward test. A user asks: \"帮我 landing 一下：明天要不要"
+            "先写测试再改文档？\" No prior takeoff thesis, architecture review, or bold "
+            "target has been provided.\n\n"
+            "Answer as the assistant would in a real conversation. The answer should "
+            "not force the landing template; it should state that landing needs an "
+            "already-opened bold direction or answer the ordinary next-step question "
+            "without pretending this is a landing judgment."
+        ),
+        required_text=("bold direction",),
+        forbidden_text=(
+            "## Landing Judgment",
+            "## Reality Check",
+            "## Cut List",
+            "## Stop Rule",
+            "Status: landing-reviewed",
+        ),
+    ),
 }
 
 
@@ -191,6 +233,60 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertNotIn("## Landing Transition", chinese)
         self.assertNotIn("references/output-template.md", chinese)
 
+    def test_takeoff_description_is_trigger_only_not_output_summary(self) -> None:
+        english = (TAKEOFF_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (TAKEOFF_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+        english_description = frontmatter_description(english)
+        chinese_description = frontmatter_description(chinese)
+
+        self.assertTrue(english_description.startswith("Use when"))
+        self.assertIn("think bigger", english_description)
+        self.assertIn("open the design space", english_description)
+        self.assertIn("route to landing", english_description)
+        self.assertLess(len(english_description), 520)
+        for forbidden in (
+            "Produces",
+            "kill-list",
+            "options table",
+            "verification path",
+            "first proof point",
+            "falsifier",
+            "payoff ledger",
+            "closing table",
+        ):
+            self.assertNotIn(forbidden, english_description)
+
+        self.assertIn("当用户想", chinese_description)
+        self.assertIn("打开设计空间", chinese_description)
+        self.assertIn("转给 landing", chinese_description)
+        self.assertLess(len(chinese_description), 260)
+        for forbidden in (
+            "产出一份",
+            "kill-list",
+            "选项表",
+            "验证路径",
+            "首个证明点",
+            "证伪条件",
+            "收益账单",
+        ):
+            self.assertNotIn(forbidden, chinese_description)
+
+    def test_takeoff_stays_at_judgment_layer_not_downstream_artifacts(self) -> None:
+        english = (TAKEOFF_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (TAKEOFF_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("direction judgment layer", english)
+        self.assertIn("does not write design specs", english)
+        self.assertIn("does not write implementation plans", english)
+        self.assertIn("does not create experiment records", english)
+        self.assertIn("does not perform code review", english)
+
+        self.assertIn("方向判断层", chinese)
+        self.assertIn("不写设计 spec", chinese)
+        self.assertIn("不写 implementation plan", chinese)
+        self.assertIn("不创建 experiment record", chinese)
+        self.assertIn("不做 code review", chinese)
+
     def test_output_templates_are_not_used_for_dialogue_skills(self) -> None:
         self.assertFalse((TAKEOFF_DIR / "references" / "output-template.md").exists())
         self.assertFalse((LANDING_DIR / "references" / "output-template.md").exists())
@@ -248,6 +344,22 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertNotIn("executing-plans", chinese)
         self.assertNotIn("直接回答", chinese)
 
+    def test_landing_requires_explicit_input_contract(self) -> None:
+        english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("valid input must name", english)
+        self.assertIn("bold thesis", english)
+        self.assertIn("old model it replaces", english)
+        self.assertIn("main reality question", english)
+        self.assertIn("do not run the landing template", english)
+
+        self.assertIn("有效输入必须说清", chinese)
+        self.assertIn("bold thesis", chinese)
+        self.assertIn("它替代的旧模型", chinese)
+        self.assertIn("主要现实疑问", chinese)
+        self.assertIn("不要运行落地模板", chinese)
+
     def test_route_boundaries_are_not_repeated_as_skill_table(self) -> None:
         landing_english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
         landing_chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
@@ -289,7 +401,12 @@ class LandingSkillScopeTests(unittest.TestCase):
 
     def test_forward_test_prompts_cover_chain_boundaries(self) -> None:
         self.assertEqual(
-            {"takeoff_routes_to_landing", "landing_asks_before_design"},
+            {
+                "takeoff_routes_to_landing",
+                "landing_asks_before_design",
+                "takeoff_stays_direction_judgment",
+                "landing_requires_prior_bold_direction",
+            },
             set(FORWARD_SCENARIOS),
         )
         for scenario in FORWARD_SCENARIOS.values():
@@ -320,6 +437,14 @@ class LandingSkillScopeTests(unittest.TestCase):
     def test_forward_response_validator_accepts_good_responses(self) -> None:
         takeoff_response = "格局判断：先打开方向。下一步不要直接进设计，先用 landing 压实。"
         landing_response = "落地审判：先验证。下一步：要不要进入 brainstorming 做设计？"
+        takeoff_judgment_response = (
+            "This stays at the direction judgment layer. Do not write the design spec "
+            "or implementation plan yet; route the direction to landing first."
+        )
+        no_prior_landing_response = (
+            "This is not a landing case because no already-opened bold direction exists. "
+            "Answer it as an ordinary next-step question."
+        )
 
         self.assertEqual(
             [],
@@ -333,6 +458,20 @@ class LandingSkillScopeTests(unittest.TestCase):
                 FORWARD_SCENARIOS["landing_asks_before_design"], landing_response
             ),
         )
+        self.assertEqual(
+            [],
+            validate_forward_response(
+                FORWARD_SCENARIOS["takeoff_stays_direction_judgment"],
+                takeoff_judgment_response,
+            ),
+        )
+        self.assertEqual(
+            [],
+            validate_forward_response(
+                FORWARD_SCENARIOS["landing_requires_prior_bold_direction"],
+                no_prior_landing_response,
+            ),
+        )
 
     def test_forward_response_validator_rejects_template_and_artifact_outputs(self) -> None:
         bad_takeoff = (
@@ -343,6 +482,19 @@ class LandingSkillScopeTests(unittest.TestCase):
             "## Design Transition\n"
             "Create hello-scholar/memory/framing/x.md with Status: user-approved."
         )
+        bad_takeoff_artifact = (
+            "## Design Spec\n"
+            "Spec Source: None provided\n"
+            "## Implementation Plan\n"
+            "Write all tasks now."
+        )
+        bad_landing_template = (
+            "## Landing Judgment\n"
+            "## Reality Check\n"
+            "## Cut List\n"
+            "## Stop Rule\n"
+            "Forced template despite no prior bold direction."
+        )
 
         self.assertTrue(
             validate_forward_response(
@@ -352,6 +504,18 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertTrue(
             validate_forward_response(
                 FORWARD_SCENARIOS["landing_asks_before_design"], bad_landing
+            )
+        )
+        self.assertTrue(
+            validate_forward_response(
+                FORWARD_SCENARIOS["takeoff_stays_direction_judgment"],
+                bad_takeoff_artifact,
+            )
+        )
+        self.assertTrue(
+            validate_forward_response(
+                FORWARD_SCENARIOS["landing_requires_prior_bold_direction"],
+                bad_landing_template,
             )
         )
 
