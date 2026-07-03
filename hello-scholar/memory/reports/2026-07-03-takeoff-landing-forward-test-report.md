@@ -13,15 +13,17 @@ Date: 2026-07-03
 
 - 没有 `takeoff` 时，模型是否倾向保守补丁、兼容模板、顺手接流程。
 - 使用 `takeoff` 后，是否提出更干净的目标模型、删除/重塑动作、证明点和证伪条件。
-- 没有 `landing` 时，模型是否停留在泛泛阶段计划。
-- 使用 `landing` 后，是否从真实约束出发，给出最小可行推进、验证信号、cut list 和 stop rule。
+- 没有 `landing` 时，模型是否停留在泛泛阶段计划、first-step/MVP 建议，或不稳定地改写方案。
+- 使用 `landing` 后，是否保留 takeoff 的核心野心、按价值排序改写不可落地部分，并输出现实可行的落地版方案、阶段边界、验证信号、用户裁决点和 stop rule。
 
 ## Design Decision
 
 - `takeoff` 负责打开格局，输出大胆 thesis、证明点和证伪条件。
 - 当大胆方向需要可行性压力测试时，`takeoff` 询问是否转给 `landing`。
 - `takeoff` 不直接进入 `brainstorming`。
-- `landing` 负责压实方向，输出最小证明点、cut list、验证信号和 stop rule。
+- `landing` 负责把 `takeoff` 的大胆方向改写成现实可行方案，先做四档价值排序：必须保留、改写后保留、延后、删除。
+- 当用户不同意 AI 的价值排序时，`landing` 不把 AI 判断当权威，也不无条件顺从；把用户判断当作新约束，重新定价成本、风险、阶段边界、验证和止损规则。
+- `landing` 输出保留的野心、必须改写的部分、用户裁决点、落地版方案、阶段边界、验证信号和 stop rule。
 - 如果落地后需要进入设计阶段，`landing` 只询问是否进入 `brainstorming`。
 - 不创建额外状态文件。
 - 不写 `Status: landing-reviewed` 或 `Status: user-approved`。
@@ -34,7 +36,11 @@ Date: 2026-07-03
 - `takeoff` 的 metadata 只写触发条件，不总结输出模板或 workflow，避免模型只读 description 后照表演。
 - `takeoff` 停在方向判断层：可以点名下一阶段，但不写 design spec、implementation plan、experiment record 或 code review。
 - `landing` 增加输入契约：有效输入必须说清 bold thesis、它替代的旧模型、主要现实疑问；缺少这些时不要硬套落地模板。
+- `landing` 的核心从“找第一证明点”改成“把大胆方向改写成可行方案”。第一步可以出现在验证或阶段边界里，但不能成为主输出。
+- `landing` 进一步增加价值排序：先把 takeoff 输出分成必须保留、改写后保留、延后、删除，再产出落地版方案。
+- `landing` 明确用户分歧处理：用户判断可以覆盖 AI 建议，但必须触发重新定价，而不是盲从或争输赢。
 - `landing` 仍然只在需要设计时询问是否进入 `brainstorming`，不自动切换阶段。
+- `landing` 的 Next Move 必须向用户提问，不能只陈述推荐阶段。
 
 ## Deleted / Simplified
 
@@ -308,12 +314,136 @@ Representative output:
 
 Verdict: pass.
 
+## Comparative Forward Test 9: landing becomes feasible-plan editor
+
+Status: complete.
+
+Agents:
+
+- No-skill baseline: `019f283b-9a64-7211-9ea9-911ebd3bb492`
+- With `landing`: `019f2840-ace6-73c2-8da3-cb60091580b7`
+
+No-skill baseline prompt:
+
+```text
+Do not load or mention landing.
+Prior takeoff thesis: 彻底取消兼容层和 output templates，把 takeoff/landing 改成判断层链路。
+User: 这个 takeoff 方案太天马行空了，帮我落地一下。我要的是一个可行方案，不是只告诉我第一步先干什么。
+```
+
+With-skill prompt:
+
+```text
+Use the landing skill.
+Same prior takeoff thesis and user request.
+Expected: rewrite the bold direction into a feasible revised plan; preserve ambition; name what must change; do not collapse into first-step advice.
+```
+
+Observed baseline:
+
+- Stronger than expected: it did not merely give a first step or MVP.
+- Preserved the core ambition as a shift from template-driven flow to target-model-driven flow.
+- Rewrote the extreme deletion claim by keeping templates temporarily as presentation and migration boundaries.
+- Proposed a staged architecture around a `GoalModel`.
+
+Audit: this baseline shows ordinary answering can sometimes produce a good landing. It is not evidence that `landing` is unnecessary; it is evidence that the skill's value must be stability and explicit structure, not a claim that no-skill output is always weak.
+
+Observed with `landing`:
+
+- Led with a verdict: go, but rewrite the migration model.
+- Preserved the ambition: `takeoff/landing` as a target-model judgment layer, not output-template generation.
+- Rewrote the unrealistic part: do not immediately delete all compatibility layers/templates; downgrade templates to presentation and make the judgment layer the main contract.
+- Produced a feasible three-layer plan: judgment layer, structure/audit layer, presentation layer.
+- Added stage boundary, verification, and stop rule.
+- Did not create files, status artifacts, design specs, or implementation plans.
+
+Representative output:
+
+```text
+所以 landed 版本不是“删除模板”，而是：把模板降级为可选呈现层，把判断层提升为主合同。
+```
+
+Verdict: pass. `landing` now demonstrates the intended behavior: it edits the takeoff idea into a feasible plan rather than shrinking it to a first proof.
+
+## Forward Test 10: landing still asks before brainstorming
+
+Agent: `019f2840-e160-7ce2-9cc5-41179f32c0ec`
+
+Prompt summary:
+
+```text
+Use the landing skill.
+Prior takeoff thesis: takeoff/landing are judgment-layer pair; landing outputs feasible revised direction.
+User: “帮我落地一下，然后如果可行就直接进入 brainstorming 做设计。”
+Expected: produce feasible revised plan, ask before brainstorming, do not auto-switch or write artifacts.
+```
+
+Observed result:
+
+- Produced Landing Judgment / Ambition Kept / Must Rewrite / Reality Constraints / Feasible Plan / Stage Boundary / Verification / Stop Rule.
+- Explicitly said `landing` outputs feasible revised direction, not spec or implementation plan.
+- Asked whether to enter `brainstorming`; did not automatically switch.
+- Did not create files, approval statuses, or durable artifacts.
+
+Representative output:
+
+```text
+这个落地版可行。是否进入 `brainstorming` 来设计具体输出合同和阶段切换边界？
+```
+
+Verdict: pass.
+
+## Comparative Forward Test 11: landing ranks value and reprices user disagreement
+
+Status: complete.
+
+Agents:
+
+- No-skill baseline: `019f2854-46c4-77b3-a032-300ac654d387`
+- With `landing` before Next Move tightening: `019f2854-920e-7d82-896c-16588f4c2eae`
+- With `landing` after Next Move tightening: `019f2856-5bda-7db1-b321-5e7cc59df213`
+
+Prompt summary:
+
+```text
+Prior takeoff thesis: replace scattered compatibility shims with a clean takeoff -> landing -> optional design chain, remove dialogue output templates, and stop auto-entering brainstorming.
+User: “把这个 takeoff 方向落地一下。你先判断哪些部分最值得保留，哪些没价值；如果我不同意你的判断怎么办？”
+Expected with landing: four-bucket value ranking, feasible revised plan, user disagreement as a new constraint, repriced cost/risk/stage/verification/stop rule, and an explicit question in Next Move.
+```
+
+Observed no-skill baseline:
+
+- Produced useful advice, but used coarse categories: “most worth keeping” and “lower value / be careful”.
+- Did not use the four required buckets.
+- Handled disagreement by splitting fact/product/risk/cost questions, but did not explicitly re-price stage boundary, verification, and stop rule.
+
+Observed with `landing`:
+
+- Produced four value buckets: Must Keep, Rewrite and Keep, Defer, Delete.
+- Preserved the clean-chain ambition while rewriting “delete shims” into evidence-based deletion.
+- Treated user disagreement as a new constraint, not as AI authority or blind obedience.
+- Repriced cost, risk, boundary, verification, and deletion conditions when the user disagrees.
+- Produced a feasible landed model: `takeoff` opens direction, `landing` ranks value and rewrites to a feasible target, `brainstorming/design` only starts after user confirmation.
+- After the Next Move tightening, ended with an explicit user question instead of merely stating the recommended next phase.
+
+Representative output:
+
+```text
+如果你不同意我的判断，我不会把我的 ranking 当权威，也不会直接无条件听你的改。正确做法是：把你的不同意当成新约束，然后重新计价。
+```
+
+```text
+下一步: 你要我按这个判断继续，把它整理成一版具体的落地设计边界，还是先挑一个你不同意的保留/删除判断来重新计价？
+```
+
+Verdict: pass. This revision made `landing` more stable than baseline for value ranking, user/AI disagreement, and explicit next-step consent.
+
 ## Comparative Audit Summary
 
 - `takeoff` value: strong. It reduced conservative compatibility bias and produced a cleaner target model.
-- `landing` value: real but narrower. It reliably framed the first proof, constraints, cut list, and stop rule, but a capable baseline can also do this on a well-specified prompt.
-- Current skill edits are still justified: the observed with-skill outputs align with the desired chain and avoid the previous failure modes.
-- Residual risk: if future prompts are less specific than these tests, `landing` could still over-apply unless metadata remains narrow and forward tests keep checking ordinary rollout questions.
+- `landing` value after this revision: real as a stabilizer and explicit feasible-plan editor. A capable baseline can sometimes do similar work, but the skill makes the structure durable: preserve ambition, rank value, rewrite unrealistic parts, produce feasible plan, set user decision points, set stage boundary, verify, and stop.
+- Current skill edits are justified because the old `landing` model over-emphasized first proof / first move, which did not match the desired usage.
+- Residual risk: `landing` could still become too much like generic design if prompts lack a prior takeoff thesis. Metadata and input-contract tests remain important.
 
 ## Local Harness
 
@@ -326,10 +456,15 @@ Added `test/test_landing_skill_scope.py` with:
 - Static checks that `takeoff` metadata is trigger-only rather than an output/workflow summary.
 - Static checks that `takeoff` stays at the judgment layer and does not take over downstream artifact workflows.
 - Static checks that `landing` requires an explicit input contract before running the landing template.
+- Static checks that `landing` rewrites takeoff output into a feasible plan instead of centering the first move.
+- Static checks that `landing` output now centers Value Ranking / Ambition Kept / Must Rewrite / User Decision Points / Feasible Plan / Stage Boundary.
+- Static checks that `landing` requires four value buckets: Must Keep, Rewrite and Keep, Defer, Delete.
+- Static checks that user disagreement becomes a new constraint and triggers re-pricing of cost, risk, stage boundary, verification, and stop rule.
+- Static checks that Next Move must ask the user directly instead of only stating the recommended next phase.
 - Forward-test prompt definitions for fresh-agent runs.
 - A small response validator that rejects template-section and artifact/status regressions.
 - Comparative forward-test prompt definitions for no-skill vs with-skill quality checks.
-- Quality rubric helpers that reject conservative takeoff baselines and generic landing baselines.
+- Quality rubric helpers that reject conservative takeoff baselines, first-step-only landing baselines, and binary value-only landing baselines.
 
 ## Reviewer Checkpoints
 

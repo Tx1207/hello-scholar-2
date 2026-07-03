@@ -56,8 +56,8 @@ FORWARD_SCENARIOS: dict[str, ForwardScenario] = {
             "shims and rebuild the skill chain as takeoff -> landing -> optional design. "
             "The user asks: \"帮我落地一下，然后看要不要进入设计阶段。\"\n\n"
             "Answer as the assistant would in a real conversation. The answer should "
-            "pressure-test the bold direction and ask whether to enter brainstorming "
-            "only as the next conversational step."
+            "rewrite the bold direction into a feasible plan and ask whether to enter "
+            "brainstorming only as the next conversational step."
         ),
         required_text=("brainstorming",),
         forbidden_text=(
@@ -153,8 +153,9 @@ COMPARATIVE_FORWARD_SCENARIOS: dict[str, ComparativeForwardScenario] = {
             "Answer as the assistant would in a real conversation."
         ),
         audit_goal=(
-            "Baseline may stay generic; with landing should name real constraints, "
-            "minimum viable move, verification, cut list, and stop rule."
+            "Baseline may collapse into first-step advice; with landing should preserve "
+            "the ambition, rewrite unrealistic parts, produce a feasible revised plan, "
+            "and add verification plus a stop rule."
         ),
     ),
 }
@@ -200,16 +201,49 @@ def evaluate_takeoff_quality(response: str) -> list[str]:
 def evaluate_landing_quality(response: str) -> list[str]:
     lowered = response.lower()
     checks = {
+        "value ranking": any(
+            text in lowered for text in ("value ranking", "价值排序", "价值排位")
+        ),
+        "must keep bucket": any(
+            text in lowered for text in ("must keep", "必须保留", "核心价值")
+        ),
+        "rewrite and keep bucket": any(
+            text in lowered
+            for text in ("rewrite and keep", "改写后保留", "改写保留")
+        ),
+        "defer bucket": any(text in lowered for text in ("defer", "延后", "暂缓")),
+        "delete bucket": any(text in lowered for text in ("delete", "删除", "剔除")),
+        "ambition kept": any(
+            text in lowered for text in ("ambition kept", "保留的野心", "保留的大方向")
+        ),
+        "unrealistic parts rewritten": any(
+            text in lowered
+            for text in ("rewrite", "must change", "必须改写", "改写", "不可落地")
+        ),
+        "feasible revised plan": any(
+            text in lowered
+            for text in (
+                "feasible revised",
+                "revised plan",
+                "landed plan",
+                "可行方案",
+                "落地版方案",
+                "现实可行",
+            )
+        ),
         "real constraints": any(
             text in lowered for text in ("constraint", "blast radius", "约束", "影响面")
         ),
-        "minimum viable move": any(
-            text in lowered for text in ("minimum viable", "first move", "最小", "第一步")
+        "stage boundary": any(
+            text in lowered for text in ("stage boundary", "phase boundary", "阶段边界")
         ),
         "verification": any(text in lowered for text in ("verification", "验证"))
         and any(text in lowered for text in ("success", "failure", "成功", "失败")),
-        "cut list": any(text in lowered for text in ("cut list", "cut", "砍")),
         "stop rule": any(text in lowered for text in ("stop rule", "止损", "暂停")),
+        "user disagreement repriced": any(
+            text in lowered for text in ("user decision", "用户裁决", "用户判断")
+        )
+        and any(text in lowered for text in ("re-price", "repriced", "重新定价")),
     }
     return [name for name, passed in checks.items() if not passed]
 
@@ -297,10 +331,13 @@ class LandingSkillScopeTests(unittest.TestCase):
 
         self.assertRegex(description, r"\bafter (a )?takeoff\b")
         self.assertIn("already-opened", description)
+        self.assertIn("feasible", description)
+        self.assertIn("revised", description)
         self.assertNotIn("Use whenever", description)
         self.assertNotIn("even if they never name the skill", description)
         self.assertNotIn("what do I do first", description)
         self.assertNotIn("one proof point", description)
+        self.assertNotIn("minimum-viable", description)
         self.assertNotIn("cut list", description)
         self.assertNotIn("success/failure signals", description)
         self.assertNotIn("stop rule", description)
@@ -315,6 +352,8 @@ class LandingSkillScopeTests(unittest.TestCase):
 
         self.assertIn("takeoff 之后", description)
         self.assertIn("已经打开", description)
+        self.assertIn("可行方案", description)
+        self.assertIn("改写", description)
         self.assertNotIn("哪怕用户没点名", description)
         self.assertNotIn("第一步先干嘛", description)
         self.assertNotIn("可执行、可验证、最小可行", description)
@@ -360,6 +399,50 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn("主要现实疑问", chinese)
         self.assertIn("不要运行落地模板", chinese)
 
+    def test_landing_rewrites_takeoff_output_into_feasible_plan(self) -> None:
+        english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("rewrite the bold direction into a feasible plan", english)
+        self.assertIn("keep the ambition", english)
+        self.assertIn("rewrite the parts that cannot survive reality", english)
+        self.assertIn("feasible revised direction", english)
+        self.assertIn("not just the first move", english)
+        self.assertIn("not the whole execution plan", english)
+
+        self.assertIn("把大胆方向改写成可行方案", chinese)
+        self.assertIn("保留野心", chinese)
+        self.assertIn("改写经不起现实的部分", chinese)
+        self.assertIn("落地版方向", chinese)
+        self.assertIn("不是只给第一步", chinese)
+        self.assertIn("不是完整执行计划", chinese)
+
+    def test_landing_value_ranks_takeoff_output_and_handles_user_disagreement(self) -> None:
+        english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("Value Ranking", english)
+        self.assertIn("Must Keep", english)
+        self.assertIn("Rewrite and Keep", english)
+        self.assertIn("Defer", english)
+        self.assertIn("Delete", english)
+        self.assertIn("AI value ranking is an evidence-backed recommendation", english)
+        self.assertIn("If the user disagrees", english)
+        self.assertIn("treat the user's judgment as a new constraint", english)
+        self.assertIn(
+            "re-price cost, risk, stage boundary, verification, and stop rule", english
+        )
+
+        self.assertIn("价值排序", chinese)
+        self.assertIn("必须保留", chinese)
+        self.assertIn("改写后保留", chinese)
+        self.assertIn("延后", chinese)
+        self.assertIn("删除", chinese)
+        self.assertIn("AI 的价值排序是基于证据的建议", chinese)
+        self.assertIn("如果用户不同意", chinese)
+        self.assertIn("把用户判断当作新的约束", chinese)
+        self.assertIn("重新定价成本、风险、阶段边界、验证和止损规则", chinese)
+
     def test_route_boundaries_are_not_repeated_as_skill_table(self) -> None:
         landing_english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
         landing_chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
@@ -377,12 +460,35 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn("Do not route directly from `takeoff` to `brainstorming`", takeoff_english)
         self.assertIn("不要从 `takeoff` 直接转到 `brainstorming`", takeoff_chinese)
 
+    def test_landing_output_centers_feasible_plan_not_first_step(self) -> None:
+        english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("Value Ranking", english)
+        self.assertIn("Feasible Plan", english)
+        self.assertIn("Ambition Kept", english)
+        self.assertIn("Must Rewrite", english)
+        self.assertIn("User Decision Points", english)
+        self.assertIn("Stage Boundary", english)
+        self.assertNotIn("Minimum Viable Move", english)
+        self.assertNotIn("The default is a smaller proof", english)
+
+        self.assertIn("价值排序", chinese)
+        self.assertIn("落地版方案", chinese)
+        self.assertIn("保留的野心", chinese)
+        self.assertIn("必须改写的部分", chinese)
+        self.assertIn("用户裁决点", chinese)
+        self.assertIn("阶段边界", chinese)
+        self.assertNotIn("最小可行推进", chinese)
+        self.assertNotIn("默认是缩小验证", chinese)
+
     def test_landing_transitions_to_brainstorming_without_auto_phase_switch(self) -> None:
         english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
         chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
 
         self.assertIn("ask the user whether to enter `brainstorming`", english)
         self.assertIn("Ask whether to proceed with that judgment", english)
+        self.assertIn("Next Move must ask", english)
         self.assertIn("Do not switch phases automatically", english)
         self.assertNotIn("hello-scholar/memory/framing/", english)
         self.assertNotIn("Status: landing-reviewed", english)
@@ -392,6 +498,7 @@ class LandingSkillScopeTests(unittest.TestCase):
 
         self.assertIn("再询问是否进入 `brainstorming`", chinese)
         self.assertIn("询问用户是否按这个判断推进", chinese)
+        self.assertIn("下一步必须询问", chinese)
         self.assertIn("不要自动切换阶段", chinese)
         self.assertNotIn("hello-scholar/memory/framing/", chinese)
         self.assertNotIn("Status: landing-reviewed", chinese)
@@ -430,8 +537,8 @@ class LandingSkillScopeTests(unittest.TestCase):
 
         self.assertIn("Do not load or mention", landing_scenario.no_skill_prompt)
         self.assertIn("Use the landing skill", landing_scenario.with_skill_prompt)
-        self.assertIn("real constraints", landing_scenario.audit_goal)
-        self.assertIn("minimum viable move", landing_scenario.audit_goal)
+        self.assertIn("feasible revised plan", landing_scenario.audit_goal)
+        self.assertIn("rewrite unrealistic parts", landing_scenario.audit_goal)
         self.assertIn("stop rule", landing_scenario.audit_goal)
 
     def test_forward_response_validator_accepts_good_responses(self) -> None:
@@ -535,17 +642,32 @@ class LandingSkillScopeTests(unittest.TestCase):
         generic_landing_baseline = (
             "可以先分阶段推进：第一阶段改文档，第二阶段测试，第三阶段上线。"
         )
+        binary_value_baseline = (
+            "价值判断：有价值就保留，无价值就删除。用户不同意就听用户的。"
+            "落地版方案是后面再看。"
+        )
         landing_output = (
-            "Reality Check: real constraint 是 skill discovery 和误触发影响面。"
-            "Minimum Viable Move: 第一部只删 output-template 并加 forward test。"
-            "Verification: 成功是 no-skill baseline 保守、with-skill 输出更大胆；"
-            "失败是两者没有差异。Cut List: 砍掉额外状态文件。"
-            "Stop Rule: 如果 landing 不能给出真实约束和止损，就暂停扩大。"
+            "Value Ranking: Must Keep 必须保留判断层链路；Rewrite and Keep 改写后保留"
+            " landing 的可行方案；Defer 延后完整设计；Delete 删除中间模板。"
+            "Ambition Kept: 保留的野心是 takeoff/landing 成为判断层链路。"
+            "Must Rewrite: 必须改写不可落地的部分，不能直接删除所有兼容边界。"
+            "Feasible Plan: 落地版方案是先改 skill contract 和 forward tests，"
+            "再决定是否进入 brainstorming。Reality Check: real constraint 是 skill discovery "
+            "和误触发影响面。Stage Boundary: 阶段边界是先改判断层，不写执行计划。"
+            "Verification: 成功是 no-skill baseline 只给第一步、with-skill 给现实可行方案；"
+            "失败是两者没有差异。Stop Rule: 如果 landing 不能改写方案，就暂停扩大。"
+            "User Decision Points: 如果用户判断不同，treat user decision as constraint "
+            "and re-price cost/risk/stage/verification/stop rule 重新定价。"
         )
 
         self.assertTrue(evaluate_takeoff_quality(conservative_baseline))
         self.assertEqual([], evaluate_takeoff_quality(takeoff_output))
         self.assertTrue(evaluate_landing_quality(generic_landing_baseline))
+        binary_failures = evaluate_landing_quality(binary_value_baseline)
+        self.assertIn("must keep bucket", binary_failures)
+        self.assertIn("rewrite and keep bucket", binary_failures)
+        self.assertIn("defer bucket", binary_failures)
+        self.assertIn("user disagreement repriced", binary_failures)
         self.assertEqual([], evaluate_landing_quality(landing_output))
 
 
