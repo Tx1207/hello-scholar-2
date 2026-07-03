@@ -2,7 +2,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 function parseSkillName(skillMdText, skillMdPath) {
-  const match = skillMdText.match(/^---\n([\s\S]*?)\n---/);
+  const match = skillMdText.match(/^---\r?\n([\s\S]*?)\r?\n---/);
   if (!match) {
     throw new Error(`Missing frontmatter: ${skillMdPath}`);
   }

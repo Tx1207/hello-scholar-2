@@ -11,11 +11,18 @@ function run(command, args) {
   return true;
 }
 
+function commandRuns(command, args) {
+  const result = spawnSync(command, args, { stdio: "ignore" });
+  return !result.error && result.status === 0;
+}
+
 run(process.execPath, ["--test", "test/test_*.js"]);
 
-if (!run("python3", ["-m", "unittest", "discover", "-s", "test"])) {
-  if (!run("python", ["-m", "unittest", "discover", "-s", "test"])) {
-    console.error("Could not find python3 or python to run Python tests.");
-    process.exit(1);
-  }
+const pythonCommand = ["python3", "python"].find((command) => commandRuns(command, ["--version"]));
+
+if (!pythonCommand) {
+  console.error("Could not find python3 or python to run Python tests.");
+  process.exit(1);
 }
+
+run(pythonCommand, ["-m", "unittest", "discover", "-s", "test"]);
