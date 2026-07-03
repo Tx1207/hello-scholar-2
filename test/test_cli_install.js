@@ -10,7 +10,7 @@ const {
   removeInstructionBlock,
   upsertInstructionBlock,
 } = require("../src/instruction-blocks");
-const { discoverSkills } = require("../src/skill-discovery");
+const { discoverSkills, parseSkillName } = require("../src/skill-discovery");
 const { install, uninstall } = require("../src/install");
 
 const REPO_ROOT = path.resolve(__dirname, "..");
@@ -105,6 +105,11 @@ test("discoverSkills returns unique skill names from repository skills", () => {
   assert.ok(names.includes("writing-plans"));
   assert.ok(names.includes("record-experiment"));
   assert.equal(new Set(names).size, names.length);
+});
+
+test("parseSkillName accepts LF and CRLF frontmatter line endings", () => {
+  assert.equal(parseSkillName("---\nname: lf-skill\n---\n", "lf/SKILL.md"), "lf-skill");
+  assert.equal(parseSkillName("---\r\nname: crlf-skill\r\n---\r\n", "crlf/SKILL.md"), "crlf-skill");
 });
 
 test("install codex in link mode creates AGENTS block and linked skills", () => {
