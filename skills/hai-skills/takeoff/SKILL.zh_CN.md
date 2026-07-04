@@ -14,7 +14,7 @@ description: |
 
 在方案讨论时打开设计空间：推荐正确的目标模型，而不是最小补丁。输出是一份格局判断——一个尖锐的 thesis，加上一套验证它的方法。
 
-`takeoff` 停在方向判断层。它可以点名下一阶段应该去哪里，但不写设计 spec，不写 implementation plan，不创建 experiment record，也不做 code review。下游流程有自己的 skill 和 gate。
+`takeoff` 停在方向判断层。它可以点名下一阶段，但不写设计 spec，不写 implementation plan，不创建 experiment record，也不做 code review。用户认可方向时，可以询问是否进入 `brainstorming` 细化设计；方向需要可行性压实时，可以询问是否转给 `landing`。只询问，不自动切换阶段。
 
 ## 核心原则
 
@@ -97,7 +97,7 @@ description: |
 
 6. **只有在选项有实质差异时，才给 2-3 个方案**，使用统一标签：保守路线 / 干净目标 / 分阶段抵达干净目标。明确推荐一个。
 
-7. **回到执行。** 找出第一个不可逆决策、第一个证明点、什么证据会推翻这个 thesis，以及不该花时间的事情。First Proof Point 是证据问题，不是推荐执行切片。如果大胆方向现在需要可行性压力测试，询问是否转给 `landing`；不要预选落地版方案。不要从 `takeoff` 直接转到 `brainstorming`。
+7. **回到执行。** 找出第一个不可逆决策、第一个证明点、什么证据会推翻这个 thesis，以及不该花时间的事情。First Proof Point 是证据问题，不是推荐执行切片。收尾给选择：进入 `brainstorming` 细化设计、转给 `landing` 压实可行性，或继续重判 thesis。不要自动切换阶段，不要在 `takeoff` 里写 spec，不要预选落地版方案。
 
 ## 输出
 

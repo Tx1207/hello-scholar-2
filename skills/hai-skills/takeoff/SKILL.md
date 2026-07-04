@@ -17,7 +17,7 @@ For Chinese readers, see `SKILL.zh_CN.md`. The English `SKILL.md` is the executi
 
 Open the design space during 方案讨论: recommend the right target model, not the smallest patch. The output is a 格局判断 — a sharp thesis plus a disciplined way to test it.
 
-`takeoff` stays at the direction judgment layer. It may name the next appropriate phase, but it does not write design specs, does not write implementation plans, does not create experiment records, and does not perform code review. Those downstream workflows have their own skills and gates.
+`takeoff` stays at the direction judgment layer. It may name the next phase, but it does not write design specs, does not write implementation plans, does not create experiment records, and does not perform code review. If the user accepts the direction, it can ask whether to enter `brainstorming` for design details; if the direction needs feasibility pressure, it can ask whether to route to `landing`. It only asks; it does not switch phases automatically.
 
 ## Core Principle
 
@@ -100,7 +100,7 @@ These are the failure modes that keep an answer small. Each gets countered by th
 
 6. **Give 2-3 options only if they materially differ**, using the canonical labels: Conservative path / Clean target / Staged clean path. Recommend one.
 
-7. **Bring it back to execution.** Identify the first irreversible decision, the first proof point, what would falsify the thesis, and what not to spend time on. First Proof Point is an evidence question, not a recommended execution slice. If the bold direction now needs feasibility pressure-testing, ask whether to route to `landing`; do not preselect the landed plan. Do not route directly from `takeoff` to `brainstorming`.
+7. **Bring it back to execution.** Identify the first irreversible decision, the first proof point, what would falsify the thesis, and what not to spend time on. First Proof Point is an evidence question, not a recommended execution slice. Close with a choice: ask whether to enter `brainstorming` for design details, route to `landing` for feasibility pressure, or keep rejudging the thesis. Do not switch phases automatically, do not write a spec from `takeoff`, and do not preselect the landed plan.
 
 ## Output
 

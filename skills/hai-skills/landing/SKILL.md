@@ -10,7 +10,7 @@ For Chinese readers, see `SKILL.zh_CN.md`. The English `SKILL.md` is the executi
 
 ## Overview
 
-Automatically use this skill only after `takeoff` (formerly `geju`) has produced a direction that needs feasibility pressure. User-explicit `landing` requests are valid triggers, but still need a prior direction or the missing landing inputs. `landing` should rewrite the bold direction into a feasible plan.
+Automatically use this skill only after `takeoff` (formerly `geju`) has produced a direction that needs feasibility pressure. It is not the default follow-up to every `takeoff`; accepted directions can go to `brainstorming` for design. User-explicit `landing` requests are valid triggers, but still need a prior direction or the missing landing inputs. `landing` should rewrite the bold direction into a feasible plan.
 
 For `landing`, valid input must name the bold thesis, the old model it replaces, and the main reality question that could break it. If those are missing, do not run the landing template; answer the ordinary question or ask for the missing direction first.
 

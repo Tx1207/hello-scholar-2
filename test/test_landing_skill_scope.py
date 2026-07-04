@@ -37,19 +37,21 @@ class EffectivenessScenario:
 
 
 FORWARD_SCENARIOS: dict[str, ForwardScenario] = {
-    "takeoff_routes_to_landing": ForwardScenario(
-        scenario_id="takeoff_routes_to_landing",
+    "takeoff_offers_brainstorming_or_landing": ForwardScenario(
+        scenario_id="takeoff_offers_brainstorming_or_landing",
         prompt=(
             f"Use the takeoff skill at {TAKEOFF_DIR}.\n\n"
             "Fresh-agent forward test. A user asks: \"这个方案太保守了，打开格局。"
             "是不是应该直接进入 brainstorming 做设计？\"\n\n"
             "Answer as the assistant would in a real conversation. The answer should "
-            "make a bold high-level judgment, then route feasibility pressure-testing "
-            "to landing if a next skill is needed."
+            "make a bold high-level judgment, then ask whether to use brainstorming "
+            "for design details or landing for feasibility pressure."
         ),
-        required_text=("landing",),
+        required_text=("brainstorming", "landing"),
         forbidden_text=(
-            "brainstorming 做设计",
+            "hello-scholar/memory/specs/",
+            "write spec",
+            "写 spec",
             "## Landing Transition",
             "references/output-template.md",
             "hello-scholar/memory/framing/",
@@ -133,8 +135,9 @@ EFFECTIVENESS_SCENARIOS: dict[str, EffectivenessScenario] = {
         ),
         expected_behavior=(
             "Should produce a clean target model, challenge compatibility-first "
-            "patching, name deletion or reframing opportunities, and route "
-            "feasibility pressure to landing instead of design."
+            "patching, name deletion or reframing opportunities, and offer "
+            "brainstorming for design details or landing for feasibility pressure "
+            "without writing downstream artifacts."
         ),
     ),
     "takeoff_resists_artifact_pressure": EffectivenessScenario(
@@ -161,10 +164,10 @@ EFFECTIVENESS_SCENARIOS: dict[str, EffectivenessScenario] = {
             "tests. Answer as the assistant would in a real conversation."
         ),
         expected_behavior=(
-            "Should name a bold thesis and proof questions, then ask whether to "
-            "route feasibility pressure to landing. It must not preselect a minimal "
-            "execution slice such as Protocol Kernel + Conformance v1 as the next "
-            "landing result."
+            "Should name a bold thesis and proof questions, then ask whether to use "
+            "brainstorming for design details or landing for feasibility pressure. "
+            "It must not preselect a minimal execution slice such as Protocol "
+            "Kernel + Conformance v1 as the next landing result."
         ),
     ),
     "landing_ranks_value_and_reprices_disagreement": EffectivenessScenario(
@@ -372,19 +375,23 @@ def evaluate_landing_quality(response: str) -> list[str]:
 
 
 class LandingSkillScopeTests(unittest.TestCase):
-    def test_takeoff_routes_bold_direction_to_landing_not_brainstorming(self) -> None:
+    def test_takeoff_offers_brainstorming_or_landing_without_auto_switch(self) -> None:
         english = (TAKEOFF_DIR / "SKILL.md").read_text(encoding="utf-8")
         chinese = (TAKEOFF_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
 
         self.assertIn("route to `landing`", english)
-        self.assertIn("Do not route directly from `takeoff` to `brainstorming`", english)
+        self.assertIn("enter `brainstorming` for design details", english)
+        self.assertIn("does not switch phases automatically", english)
+        self.assertIn("does not write design specs", english)
         self.assertNotIn("hello-scholar/memory/framing/", english)
         self.assertNotIn("Status: user-approved", english)
         self.assertNotIn("## Landing Transition", english)
         self.assertNotIn("references/output-template.md", english)
 
         self.assertIn("转给 `landing`", chinese)
-        self.assertIn("不要从 `takeoff` 直接转到 `brainstorming`", chinese)
+        self.assertIn("进入 `brainstorming` 细化设计", chinese)
+        self.assertIn("不自动切换阶段", chinese)
+        self.assertIn("不写设计 spec", chinese)
         self.assertNotIn("hello-scholar/memory/framing/", chinese)
         self.assertNotIn("Status: user-approved", chinese)
         self.assertNotIn("## Landing Transition", chinese)
@@ -451,11 +458,13 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn("First Proof Point is an evidence question", english)
         self.assertIn("not a recommended execution slice", english)
         self.assertIn("ask whether to route to `landing`", english)
+        self.assertIn("ask whether to enter `brainstorming` for design details", english)
         self.assertIn("do not preselect the landed plan", english)
 
         self.assertIn("First Proof Point 是证据问题", chinese)
         self.assertIn("不是推荐执行切片", chinese)
         self.assertIn("询问是否转给 `landing`", chinese)
+        self.assertIn("进入 `brainstorming` 细化设计", chinese)
         self.assertIn("不要预选落地版方案", chinese)
 
     def test_output_templates_are_not_used_for_dialogue_skills(self) -> None:
@@ -655,8 +664,10 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertLessEqual(landing_chinese.count("常规训练"), 1)
         self.assertIn("ask the user whether to enter `brainstorming`", landing_english)
         self.assertIn("再询问是否进入 `brainstorming`", landing_chinese)
-        self.assertIn("Do not route directly from `takeoff` to `brainstorming`", takeoff_english)
-        self.assertIn("不要从 `takeoff` 直接转到 `brainstorming`", takeoff_chinese)
+        self.assertIn("enter `brainstorming` for design details", takeoff_english)
+        self.assertIn("进入 `brainstorming` 细化设计", takeoff_chinese)
+        self.assertNotIn("Do not route directly from `takeoff` to `brainstorming`", takeoff_english)
+        self.assertNotIn("不要从 `takeoff` 直接转到 `brainstorming`", takeoff_chinese)
 
     def test_landing_output_centers_feasible_plan_not_first_step(self) -> None:
         english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
@@ -707,7 +718,7 @@ class LandingSkillScopeTests(unittest.TestCase):
     def test_forward_test_prompts_cover_chain_boundaries(self) -> None:
         self.assertEqual(
             {
-                "takeoff_routes_to_landing",
+                "takeoff_offers_brainstorming_or_landing",
                 "landing_asks_before_design",
                 "takeoff_stays_direction_judgment",
                 "landing_requires_prior_bold_direction",
@@ -787,7 +798,10 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn("stop rule", landing_scenario.audit_goal)
 
     def test_forward_response_validator_accepts_good_responses(self) -> None:
-        takeoff_response = "格局判断：先打开方向。下一步不要直接进设计，先用 landing 压实。"
+        takeoff_response = (
+            "格局判断：先打开方向。下一步：认可就进 brainstorming 细化；"
+            "太飘就用 landing 压实。"
+        )
         landing_response = "落地审判：先验证。下一步：要不要进入 brainstorming 做设计？"
         takeoff_judgment_response = (
             "This stays at the direction judgment layer. Do not write the design spec "
@@ -802,7 +816,8 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertEqual(
             [],
             validate_forward_response(
-                FORWARD_SCENARIOS["takeoff_routes_to_landing"], takeoff_response
+                FORWARD_SCENARIOS["takeoff_offers_brainstorming_or_landing"],
+                takeoff_response,
             ),
         )
         self.assertEqual(
@@ -851,7 +866,8 @@ class LandingSkillScopeTests(unittest.TestCase):
 
         self.assertTrue(
             validate_forward_response(
-                FORWARD_SCENARIOS["takeoff_routes_to_landing"], bad_takeoff
+                FORWARD_SCENARIOS["takeoff_offers_brainstorming_or_landing"],
+                bad_takeoff,
             )
         )
         self.assertTrue(
@@ -882,7 +898,7 @@ class LandingSkillScopeTests(unittest.TestCase):
             "不要用中间模板文件承载对话状态。Bold take: delete output-template, "
             "reframe landing as pressure test only. Options: Conservative path 保留模板；"
             "Clean target 删除模板；Staged clean path 先删模板再加测试。"
-            "First Proof Point: forward test 证明不直连 brainstorming。"
+            "First Proof Point: forward test 证明不自动跳阶段。"
             "Falsifier: 无 skill baseline 已经同样提出干净目标。"
         )
         generic_landing_baseline = (
