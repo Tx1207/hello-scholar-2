@@ -28,6 +28,14 @@ class ComparativeForwardScenario:
     audit_goal: str
 
 
+@dataclass(frozen=True)
+class EffectivenessScenario:
+    scenario_id: str
+    skill: str
+    prompt: str
+    expected_behavior: str
+
+
 FORWARD_SCENARIOS: dict[str, ForwardScenario] = {
     "takeoff_routes_to_landing": ForwardScenario(
         scenario_id="takeoff_routes_to_landing",
@@ -94,20 +102,107 @@ FORWARD_SCENARIOS: dict[str, ForwardScenario] = {
         prompt=(
             f"Use the landing skill at {LANDING_DIR}.\n\n"
             "Fresh-agent forward test. A user asks: \"帮我 landing 一下：明天要不要"
-            "先写测试再改文档？\" No prior takeoff thesis, architecture review, or bold "
-            "target has been provided.\n\n"
+            "先写测试再改文档？\" No prior takeoff/geju thesis has been provided.\n\n"
             "Answer as the assistant would in a real conversation. The answer should "
             "not force the landing template; it should state that landing needs an "
-            "already-opened bold direction or answer the ordinary next-step question "
+            "already-opened takeoff direction or answer the ordinary next-step question "
             "without pretending this is a landing judgment."
         ),
-        required_text=("bold direction",),
+        required_text=("takeoff",),
         forbidden_text=(
             "## Landing Judgment",
             "## Reality Check",
             "## Cut List",
             "## Stop Rule",
             "Status: landing-reviewed",
+        ),
+    ),
+}
+
+
+EFFECTIVENESS_SCENARIOS: dict[str, EffectivenessScenario] = {
+    "takeoff_opens_overcompatible_plan": EffectivenessScenario(
+        scenario_id="takeoff_opens_overcompatible_plan",
+        skill="takeoff",
+        prompt=(
+            f"Use the takeoff skill at {TAKEOFF_DIR}.\n\n"
+            "Fresh-agent effectiveness test. A user says: \"这个 landing 方案还是太"
+            "兼容旧链路了：继续保留 output-template、兼容 shim、再顺手接 "
+            "brainstorming。打开格局，重新判断目标模型。\"\n\n"
+            "Answer as the assistant would in a real conversation."
+        ),
+        expected_behavior=(
+            "Should produce a clean target model, challenge compatibility-first "
+            "patching, name deletion or reframing opportunities, and route "
+            "feasibility pressure to landing instead of design."
+        ),
+    ),
+    "takeoff_resists_artifact_pressure": EffectivenessScenario(
+        scenario_id="takeoff_resists_artifact_pressure",
+        skill="takeoff",
+        prompt=(
+            f"Use the takeoff skill at {TAKEOFF_DIR}.\n\n"
+            "Fresh-agent effectiveness test. A user says: \"这个方向太保守了，打开"
+            "格局，然后直接写 design spec、implementation plan 和实验记录。\"\n\n"
+            "Answer as the assistant would in a real conversation."
+        ),
+        expected_behavior=(
+            "Should stay at the direction judgment layer, open the target model, "
+            "and refuse to write downstream artifacts in the takeoff answer."
+        ),
+    ),
+    "takeoff_does_not_preselect_landing_slice": EffectivenessScenario(
+        scenario_id="takeoff_does_not_preselect_landing_slice",
+        skill="takeoff",
+        prompt=(
+            f"Use the takeoff skill at {TAKEOFF_DIR}.\n\n"
+            "Fresh-agent effectiveness test. A user says: \"takeoff一下这个项目。\" "
+            "The repo contains README.md, src/install.js, and landing/takeoff skill "
+            "tests. Answer as the assistant would in a real conversation."
+        ),
+        expected_behavior=(
+            "Should name a bold thesis and proof questions, then ask whether to "
+            "route feasibility pressure to landing. It must not preselect a minimal "
+            "execution slice such as Protocol Kernel + Conformance v1 as the next "
+            "landing result."
+        ),
+    ),
+    "landing_ranks_value_and_reprices_disagreement": EffectivenessScenario(
+        scenario_id="landing_ranks_value_and_reprices_disagreement",
+        skill="landing",
+        prompt=(
+            f"Use the landing skill at {LANDING_DIR}.\n\n"
+            "Fresh-agent effectiveness test. Prior takeoff thesis: delete scattered "
+            "compatibility shims, remove dialogue templates, and make takeoff -> "
+            "landing -> optional design the clean chain. Old model: compatibility-"
+            "first skill flow with ambiguous phase jumps. Main reality question: can "
+            "the clean chain preserve ambition without over-deleting real contracts? "
+            "User says: \"把这个方向落地。先判断哪些最值得保留、哪些没价值；"
+            "如果用户不同意你的判断怎么办？\"\n\n"
+            "Answer as the assistant would in a real conversation."
+        ),
+        expected_behavior=(
+            "Should use Value Ranking with Must Keep, Rewrite and Keep, Defer, "
+            "Delete; include evidence, why each important item matters, the cost "
+            "of ignoring it, and landing treatment; treat disagreement as a user "
+            "decision constraint; re-price Cost, Risk, Stage Boundary, Verification, "
+            "and Stop Rule as five separate dimensions; end with a Next Move question."
+        ),
+    ),
+    "landing_refuses_no_prior_bold_direction": EffectivenessScenario(
+        scenario_id="landing_refuses_no_prior_bold_direction",
+        skill="landing",
+        prompt=(
+            f"Use the landing skill at {LANDING_DIR}.\n\n"
+            "Fresh-agent effectiveness test. No prior takeoff/geju thesis, old model, "
+            "or main reality question has been provided. A user says: \"帮我 landing "
+            "一下：今天要不要先写测试再改文档？\"\n\n"
+            "Answer as the assistant would in a real conversation."
+        ),
+        expected_behavior=(
+            "Should treat the explicit landing request as a trigger, but say landing "
+            "needs a prior direction or missing landing inputs; do not force the "
+            "landing template, and answer or clarify the ordinary next-step question."
         ),
     ),
 }
@@ -244,6 +339,34 @@ def evaluate_landing_quality(response: str) -> list[str]:
             text in lowered for text in ("user decision", "用户裁决", "用户判断")
         )
         and any(text in lowered for text in ("re-price", "repriced", "重新定价")),
+        "evidence-backed ranking": any(
+            text in lowered for text in ("evidence:", "证据：", "代码/文档证据")
+        ),
+        "ranking explains importance": any(
+            text in lowered for text in ("why it matters:", "为什么重要：")
+        ),
+        "ranking prices omission cost": any(
+            text in lowered for text in ("cost if ignored:", "不处理的代价：")
+        ),
+        "ranking gives landing treatment": any(
+            text in lowered for text in ("landing treatment:", "落地处理：")
+        ),
+        "repriced cost dimension": any(
+            text in lowered for text in ("repriced cost:", "重新定价成本：")
+        ),
+        "repriced risk dimension": any(
+            text in lowered for text in ("repriced risk:", "重新定价风险：")
+        ),
+        "repriced stage boundary dimension": any(
+            text in lowered
+            for text in ("repriced stage boundary:", "重新定价阶段边界：")
+        ),
+        "repriced verification dimension": any(
+            text in lowered for text in ("repriced verification:", "重新定价验证：")
+        ),
+        "repriced stop rule dimension": any(
+            text in lowered for text in ("repriced stop rule:", "重新定价止损：")
+        ),
     }
     return [name for name, passed in checks.items() if not passed]
 
@@ -321,6 +444,20 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn("不创建 experiment record", chinese)
         self.assertIn("不做 code review", chinese)
 
+    def test_takeoff_routes_to_landing_without_preselecting_landing_slice(self) -> None:
+        english = (TAKEOFF_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (TAKEOFF_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("First Proof Point is an evidence question", english)
+        self.assertIn("not a recommended execution slice", english)
+        self.assertIn("ask whether to route to `landing`", english)
+        self.assertIn("do not preselect the landed plan", english)
+
+        self.assertIn("First Proof Point 是证据问题", chinese)
+        self.assertIn("不是推荐执行切片", chinese)
+        self.assertIn("询问是否转给 `landing`", chinese)
+        self.assertIn("不要预选落地版方案", chinese)
+
     def test_output_templates_are_not_used_for_dialogue_skills(self) -> None:
         self.assertFalse((TAKEOFF_DIR / "references" / "output-template.md").exists())
         self.assertFalse((LANDING_DIR / "references" / "output-template.md").exists())
@@ -330,9 +467,16 @@ class LandingSkillScopeTests(unittest.TestCase):
         description = frontmatter_description(english)
 
         self.assertRegex(description, r"\bafter (a )?takeoff\b")
-        self.assertIn("already-opened", description)
+        self.assertIn("only", description.lower())
+        self.assertIn("explicitly asks", description)
+        self.assertIn("Post-takeoff triggers", description)
+        self.assertIn("too idealistic", description)
+        self.assertIn("make it real", description)
+        self.assertIn("cut scope", description)
         self.assertIn("feasible", description)
         self.assertIn("revised", description)
+        self.assertNotIn("takeoff-like", description)
+        self.assertNotIn("architecture discussion", description)
         self.assertNotIn("Use whenever", description)
         self.assertNotIn("even if they never name the skill", description)
         self.assertNotIn("what do I do first", description)
@@ -350,10 +494,16 @@ class LandingSkillScopeTests(unittest.TestCase):
         chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
         description = frontmatter_description(chinese)
 
-        self.assertIn("takeoff 之后", description)
-        self.assertIn("已经打开", description)
+        self.assertIn("自动触发只在 takeoff", description)
+        self.assertIn("用户明确要求", description)
+        self.assertIn("takeoff/geju 后触发词", description)
+        self.assertIn("别太飘", description)
+        self.assertIn("把它做成真的", description)
+        self.assertIn("这计划靠不靠谱", description)
         self.assertIn("可行方案", description)
         self.assertIn("改写", description)
+        self.assertNotIn("类似 takeoff", description)
+        self.assertNotIn("架构讨论", description)
         self.assertNotIn("哪怕用户没点名", description)
         self.assertNotIn("第一步先干嘛", description)
         self.assertNotIn("可执行、可验证、最小可行", description)
@@ -364,7 +514,7 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertNotIn("record-experiment", description)
         self.assertNotIn("writing-plans", description)
         self.assertNotIn("根据情况直接回答", description)
-        self.assertLess(len(description), 180)
+        self.assertLess(len(description), 260)
 
     def test_routine_research_rollout_is_explicitly_not_landing(self) -> None:
         english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
@@ -387,17 +537,25 @@ class LandingSkillScopeTests(unittest.TestCase):
         english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
         chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
 
+        self.assertIn("Automatically use this skill only after `takeoff`", english)
+        self.assertIn("User-explicit `landing` requests are valid triggers", english)
+        self.assertIn("prior direction", english)
         self.assertIn("valid input must name", english)
         self.assertIn("bold thesis", english)
         self.assertIn("old model it replaces", english)
         self.assertIn("main reality question", english)
         self.assertIn("do not run the landing template", english)
+        self.assertNotIn("takeoff-like architecture discussion", english)
 
+        self.assertIn("自动触发只在 `takeoff`", chinese)
+        self.assertIn("用户明确要求 `landing` 是有效触发", chinese)
+        self.assertIn("前序方向", chinese)
         self.assertIn("有效输入必须说清", chinese)
         self.assertIn("bold thesis", chinese)
         self.assertIn("它替代的旧模型", chinese)
         self.assertIn("主要现实疑问", chinese)
         self.assertIn("不要运行落地模板", chinese)
+        self.assertNotIn("类似 takeoff 的架构讨论", chinese)
 
     def test_landing_rewrites_takeoff_output_into_feasible_plan(self) -> None:
         english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
@@ -417,6 +575,25 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn("不是只给第一步", chinese)
         self.assertIn("不是完整执行计划", chinese)
 
+    def test_landing_skill_body_stays_compact_and_non_redundant(self) -> None:
+        english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+        anti_patterns = (LANDING_DIR / "references" / "anti-patterns.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertLessEqual(len(english.splitlines()), 82)
+        self.assertLessEqual(len(chinese.splitlines()), 82)
+        self.assertLessEqual(len(anti_patterns.splitlines()), 60)
+
+        self.assertNotIn("A useful landing answer must answer", english)
+        self.assertNotIn("## What This Skill Is Not", english)
+        self.assertNotIn("一个有用的落地回答必须回答", chinese)
+        self.assertNotIn("## 它不是什么", chinese)
+
+        self.assertLessEqual(english.count("not just the first move"), 1)
+        self.assertLessEqual(chinese.count("不是只给第一步"), 1)
+
     def test_landing_value_ranks_takeoff_output_and_handles_user_disagreement(self) -> None:
         english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
         chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
@@ -432,6 +609,10 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn(
             "re-price cost, risk, stage boundary, verification, and stop rule", english
         )
+        self.assertIn(
+            "five separate dimensions: Cost, Risk, Stage Boundary, Verification, Stop Rule",
+            english,
+        )
 
         self.assertIn("价值排序", chinese)
         self.assertIn("必须保留", chinese)
@@ -442,6 +623,23 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn("如果用户不同意", chinese)
         self.assertIn("把用户判断当作新的约束", chinese)
         self.assertIn("重新定价成本、风险、阶段边界、验证和止损规则", chinese)
+        self.assertIn("五个独立维度：成本、风险、阶段边界、验证、止损", chinese)
+
+    def test_landing_value_ranking_requires_evidence_and_reasoning(self) -> None:
+        english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("Evidence:", english)
+        self.assertIn("Why it matters:", english)
+        self.assertIn("Cost if ignored:", english)
+        self.assertIn("Landing treatment:", english)
+        self.assertIn("A one-line category table is not enough", english)
+
+        self.assertIn("证据：", chinese)
+        self.assertIn("为什么重要：", chinese)
+        self.assertIn("不处理的代价：", chinese)
+        self.assertIn("落地处理：", chinese)
+        self.assertIn("只写一行分类表不够", chinese)
 
     def test_route_boundaries_are_not_repeated_as_skill_table(self) -> None:
         landing_english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
@@ -521,6 +719,53 @@ class LandingSkillScopeTests(unittest.TestCase):
             self.assertNotIn("Review the skill", scenario.prompt)
             self.assertNotIn("hello-scholar/memory/framing/", scenario.prompt)
 
+    def test_effectiveness_forward_scenarios_cover_real_usage_modes(self) -> None:
+        self.assertEqual(
+            {
+                "takeoff_opens_overcompatible_plan",
+                "takeoff_resists_artifact_pressure",
+                "takeoff_does_not_preselect_landing_slice",
+                "landing_ranks_value_and_reprices_disagreement",
+                "landing_refuses_no_prior_bold_direction",
+            },
+            set(EFFECTIVENESS_SCENARIOS),
+        )
+
+        takeoff_open = EFFECTIVENESS_SCENARIOS["takeoff_opens_overcompatible_plan"]
+        self.assertEqual("takeoff", takeoff_open.skill)
+        self.assertIn("兼容", takeoff_open.prompt)
+        self.assertIn("clean target model", takeoff_open.expected_behavior)
+        self.assertIn("landing", takeoff_open.expected_behavior)
+
+        takeoff_artifacts = EFFECTIVENESS_SCENARIOS["takeoff_resists_artifact_pressure"]
+        self.assertEqual("takeoff", takeoff_artifacts.skill)
+        self.assertIn("design spec", takeoff_artifacts.prompt)
+        self.assertIn("direction judgment layer", takeoff_artifacts.expected_behavior)
+
+        takeoff_no_slice = EFFECTIVENESS_SCENARIOS[
+            "takeoff_does_not_preselect_landing_slice"
+        ]
+        self.assertEqual("takeoff", takeoff_no_slice.skill)
+        self.assertIn("takeoff一下这个项目", takeoff_no_slice.prompt)
+        self.assertIn("must not preselect", takeoff_no_slice.expected_behavior)
+
+        landing_value = EFFECTIVENESS_SCENARIOS[
+            "landing_ranks_value_and_reprices_disagreement"
+        ]
+        self.assertEqual("landing", landing_value.skill)
+        self.assertIn("用户不同意", landing_value.prompt)
+        self.assertIn("Must Keep", landing_value.expected_behavior)
+        self.assertIn("re-price", landing_value.expected_behavior)
+        self.assertIn("Next Move", landing_value.expected_behavior)
+
+        landing_no_prior = EFFECTIVENESS_SCENARIOS[
+            "landing_refuses_no_prior_bold_direction"
+        ]
+        self.assertEqual("landing", landing_no_prior.skill)
+        self.assertIn("No prior takeoff", landing_no_prior.prompt)
+        self.assertIn("explicit landing request", landing_no_prior.expected_behavior)
+        self.assertIn("do not force", landing_no_prior.expected_behavior)
+
     def test_comparative_forward_prompts_cover_quality_audit(self) -> None:
         self.assertEqual(
             {"takeoff_opens_bolder_design", "landing_grounded_real_plan"},
@@ -549,8 +794,9 @@ class LandingSkillScopeTests(unittest.TestCase):
             "or implementation plan yet; route the direction to landing first."
         )
         no_prior_landing_response = (
-            "This is not a landing case because no already-opened bold direction exists. "
-            "Answer it as an ordinary next-step question."
+            "This explicit landing request is a trigger, but there is no prior takeoff "
+            "direction or bold thesis to land yet. Answer it as an ordinary next-step "
+            "question or ask for the missing landing inputs."
         )
 
         self.assertEqual(
@@ -646,9 +892,36 @@ class LandingSkillScopeTests(unittest.TestCase):
             "价值判断：有价值就保留，无价值就删除。用户不同意就听用户的。"
             "落地版方案是后面再看。"
         )
+        shallow_ranking_baseline = (
+            "Value Ranking: Must Keep 主链路；Rewrite and Keep 检查工具；"
+            "Defer research suite；Delete skill 数量叙事。Ambition Kept: 保留野心。"
+            "Must Rewrite: 改写成可行方案。Feasible Plan: 建一个现实可行方向。"
+            "Reality Check: real constraint 是代码。Stage Boundary: 阶段边界清楚。"
+            "Verification: success/failure 都写。Stop Rule: 失败就暂停。"
+            "User Decision Points: 用户判断不同就 re-price。"
+            "Repriced Cost: 成本。Repriced Risk: 风险。"
+            "Repriced Stage Boundary: 阶段。Repriced Verification: 验证。"
+            "Repriced Stop Rule: 止损。"
+        )
+        merged_repricing_baseline = (
+            "Value Ranking: Must Keep 必须保留主链；Rewrite and Keep 改写后保留 shim；"
+            "Defer 延后迁移工具；Delete 删除无调用模板。Ambition Kept: 保留野心。"
+            "Must Rewrite: 必须改写删除兼容层。Feasible Plan: 落地版方案是先盘点契约。"
+            "Reality Check: real constraint 是调用方和影响面。Stage Boundary: 阶段边界是"
+            "先改判断层。Verification: 成功是有证据，失败是误删。Stop Rule: 暂停误删。"
+            "User Decision Points: 用户判断不同就 re-price 成本、风险、阶段边界、"
+            "验证和停止规则。Cost: 维护路径；Risk: 误删调用方；Stage Boundary: 先盘点。"
+            "Verification and Stop Rule: 合并证明和暂停条件。"
+            "Evidence: 有证据。Why it matters: 重要。Cost if ignored: 有代价。"
+            "Landing treatment: 处理。"
+        )
         landing_output = (
             "Value Ranking: Must Keep 必须保留判断层链路；Rewrite and Keep 改写后保留"
             " landing 的可行方案；Defer 延后完整设计；Delete 删除中间模板。"
+            "Evidence: test_landing_skill_scope.py covers boundaries. "
+            "Why it matters: it prevents phase jumps. "
+            "Cost if ignored: agents collapse landing into a first step. "
+            "Landing treatment: keep the four-bucket ranking with evidence. "
             "Ambition Kept: 保留的野心是 takeoff/landing 成为判断层链路。"
             "Must Rewrite: 必须改写不可落地的部分，不能直接删除所有兼容边界。"
             "Feasible Plan: 落地版方案是先改 skill contract 和 forward tests，"
@@ -658,6 +931,10 @@ class LandingSkillScopeTests(unittest.TestCase):
             "失败是两者没有差异。Stop Rule: 如果 landing 不能改写方案，就暂停扩大。"
             "User Decision Points: 如果用户判断不同，treat user decision as constraint "
             "and re-price cost/risk/stage/verification/stop rule 重新定价。"
+            "Repriced Cost: 维护成本是否可接受。Repriced Risk: 是否破坏真实调用方。"
+            "Repriced Stage Boundary: 应该现在处理还是后续设计/实施。"
+            "Repriced Verification: 如何证明保留或删除是对的。"
+            "Repriced Stop Rule: 什么证据触发暂停。"
         )
 
         self.assertTrue(evaluate_takeoff_quality(conservative_baseline))
@@ -668,6 +945,14 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn("rewrite and keep bucket", binary_failures)
         self.assertIn("defer bucket", binary_failures)
         self.assertIn("user disagreement repriced", binary_failures)
+        shallow_failures = evaluate_landing_quality(shallow_ranking_baseline)
+        self.assertIn("evidence-backed ranking", shallow_failures)
+        self.assertIn("ranking explains importance", shallow_failures)
+        self.assertIn("ranking prices omission cost", shallow_failures)
+        self.assertIn("ranking gives landing treatment", shallow_failures)
+        merged_failures = evaluate_landing_quality(merged_repricing_baseline)
+        self.assertIn("repriced verification dimension", merged_failures)
+        self.assertIn("repriced stop rule dimension", merged_failures)
         self.assertEqual([], evaluate_landing_quality(landing_output))
 
 

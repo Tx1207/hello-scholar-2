@@ -438,6 +438,56 @@ Representative output:
 
 Verdict: pass. This revision made `landing` more stable than baseline for value ranking, user/AI disagreement, and explicit next-step consent.
 
+## Forward Test 12: effectiveness scenarios after compaction
+
+Status: complete.
+
+Agents:
+
+- `takeoff_opens_overcompatible_plan`: `019f286e-7646-7241-988d-2bdd73afad22`
+- `takeoff_resists_artifact_pressure`: `019f286e-9684-7762-830e-829c41f625ca`
+- `landing_ranks_value_and_reprices_disagreement`: `019f286f-2e2c-7e63-91eb-0fc5d218440e`
+- `landing_refuses_no_prior_bold_direction`: `019f286f-5762-7b50-8cf4-67c12202ddea`
+
+Observed:
+
+- `takeoff` challenged compatibility-first thinking, rejected `output-template` as a core model, avoided direct `brainstorming`, and proposed a cleaner `intent -> skill -> artifact` target.
+- `takeoff` resisted pressure to write `design spec`, `implementation plan`, and experiment records. It stayed at the direction-judgment layer and asked for missing constraints before downstream artifacts.
+- `landing` produced Value Ranking with Must Keep / Rewrite and Keep / Defer / Delete, rewrote shim deletion into evidence-based contract handling, repriced user disagreement, and ended with a direct Next Move question.
+- `landing` refused to run the template when no prior takeoff thesis, old model, or main reality question existed; it answered the ordinary next-step question instead.
+
+Quality note:
+
+- The value-ranking answer passed the basic behavior check, but its disagreement section merged verification and stop rule into one line. The stricter desired behavior is five separate re-pricing dimensions: Cost, Risk, Stage Boundary, Verification, Stop Rule.
+- Added a regression check so future `landing` quality examples fail if verification and stop rule are collapsed.
+- Retest after tightening: `019f289a-1499-7e52-84c5-aac440d91ebf` produced five separate disagreement dimensions: Cost, Risk, Stage Boundary, Verification, Stop Rule.
+
+Representative outputs:
+
+```text
+output-template 应该 kill，不是 rename。
+```
+
+```text
+用户不同意时，把他的判断升级成新约束，然后重新定价四件事。
+```
+
+Retest representative output:
+
+```text
+- Cost: 保留它会让主链多复杂？
+- Risk: 删掉它会断哪些真实用户、文件、脚本、文档或集成？
+- Stage Boundary: 它是现在必须保留，还是只需要迁移期保留？
+- Verification: 有什么证据能证明它被使用或没被使用？
+- Stop Rule: 如果找不到真实契约，是否删除；如果发现真实契约，是否改成显式迁移项？
+```
+
+```text
+这不适合真正跑 `landing`：没有 prior takeoff thesis、old model、main reality question。
+```
+
+Verdict: pass. The compact `landing` still preserves the intended behavior, and the added scenario matrix is useful for future regression testing.
+
 ## Comparative Audit Summary
 
 - `takeoff` value: strong. It reduced conservative compatibility bias and produced a cleaner target model.
@@ -460,8 +510,11 @@ Added `test/test_landing_skill_scope.py` with:
 - Static checks that `landing` output now centers Value Ranking / Ambition Kept / Must Rewrite / User Decision Points / Feasible Plan / Stage Boundary.
 - Static checks that `landing` requires four value buckets: Must Keep, Rewrite and Keep, Defer, Delete.
 - Static checks that user disagreement becomes a new constraint and triggers re-pricing of cost, risk, stage boundary, verification, and stop rule.
+- Static checks that disagreement re-pricing uses five separate dimensions: Cost, Risk, Stage Boundary, Verification, Stop Rule.
 - Static checks that Next Move must ask the user directly instead of only stating the recommended next phase.
+- Static compactness checks that keep `landing` body and anti-pattern reference from regrowing redundant sections.
 - Forward-test prompt definitions for fresh-agent runs.
+- Effectiveness scenario definitions for four real usage modes: over-compatible takeoff, artifact-pressure takeoff, value-ranking landing, and no-prior-direction landing.
 - A small response validator that rejects template-section and artifact/status regressions.
 - Comparative forward-test prompt definitions for no-skill vs with-skill quality checks.
 - Quality rubric helpers that reject conservative takeoff baselines, first-step-only landing baselines, and binary value-only landing baselines.
@@ -473,3 +526,36 @@ Added `test/test_landing_skill_scope.py` with:
 - Should `landing` ask “要不要进入 brainstorming” only when the user explicitly hints at design, or whenever design is a plausible next step?
 - Should the final `takeoff` answer mention `landing` only in `Next Move`, or is a short prose sentence anywhere acceptable?
 - After fresh-agent output is filled in, judge whether the with-skill answers are actually better, not merely better formatted.
+
+## Forward Test 13: user-observed takeoff/landing quality gaps
+
+Status: complete.
+
+Agent:
+
+- `takeoff_landing_quality_forward`: `019f2b0e-ce4e-7d02-8388-1a30e27cc812`
+
+Regression target:
+
+- `takeoff` should not preselect the landed execution slice after saying “route to landing”.
+- `landing` value ranking should not be a shallow four-row table; important items need evidence, why they matter, cost if ignored, and landing treatment.
+
+Observed:
+
+- `takeoff` framed First Proof Point as an evidence question, not “先改哪个文件”.
+- `takeoff` ended by asking whether to enter `landing` for feasibility pressure-testing.
+- `landing` used four buckets and cited `README.md`, `src/install.js`, and `test/test_landing_skill_scope.py`.
+- `landing` explained why each key item matters, what breaks if ignored, and how to land it.
+- User disagreement was repriced through Cost, Risk, Stage Boundary, Verification, and Stop Rule.
+
+Representative output:
+
+```text
+First Proof Point：最小证据问题不是“先改哪个文件”，而是：forward tests 能否稳定区分普通保守回答和遵守 takeoff/landing 边界的回答？
+```
+
+```text
+安装合同。证据：README 承诺写入 `AGENTS.md`/`CLAUDE.md`、`.agents/skills`/`.claude/skills`，`src/install.js` 用 `upsertInstructionBlock`、link/copy、owned uninstall。为什么重要：这是用户信任项目的入口。不处理的代价：协议再漂亮也会破坏现有项目接入。落地处理：作为硬约束保留。
+```
+
+Verdict: pass. The new wording directly addresses the user-observed gaps.

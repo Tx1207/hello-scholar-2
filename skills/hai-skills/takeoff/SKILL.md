@@ -100,7 +100,7 @@ These are the failure modes that keep an answer small. Each gets countered by th
 
 6. **Give 2-3 options only if they materially differ**, using the canonical labels: Conservative path / Clean target / Staged clean path. Recommend one.
 
-7. **Bring it back to execution.** Identify the first irreversible decision, the first proof point, what would falsify the thesis, and what not to spend time on. If the bold direction now needs feasibility pressure-testing, ask the user whether to route to `landing`. Do not route directly from `takeoff` to `brainstorming`.
+7. **Bring it back to execution.** Identify the first irreversible decision, the first proof point, what would falsify the thesis, and what not to spend time on. First Proof Point is an evidence question, not a recommended execution slice. If the bold direction now needs feasibility pressure-testing, ask whether to route to `landing`; do not preselect the landed plan. Do not route directly from `takeoff` to `brainstorming`.
 
 ## Output
 
@@ -114,7 +114,7 @@ Produce a 格局判断. For substantial answers, use these sections; for short d
 - **Bold Takes** — defensible bold claims; what to delete / merge / split / rename; what not to preserve.
 - **Options** — the Conservative path / Clean target / Staged clean path table with a verdict per row.
 - **What Not To Do** — local optimizations, shims, or detail traps to avoid.
-- **First Proof Point** — the smallest artifact that proves the direction.
+- **First Proof Point** — the smallest evidence question that would prove or weaken the direction; not a recommended execution slice.
 - **Falsifier** — what evidence would prove the thesis wrong.
 - **Payoff Ledger (收益账单)** — the closing table that justifies the direction to the audience: each major move (drawn from the Bold Takes / kill list) with the price paid now, the concrete pain it removes or capability it unlocks, and when that payoff becomes visible. Generic benefits ("cleaner", "more maintainable") are banned — every row must name a specific pain or unlock, or the row gets cut.
 
