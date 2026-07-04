@@ -280,18 +280,65 @@ def validate_forward_response(scenario: ForwardScenario, response: str) -> list[
 
 def evaluate_takeoff_quality(response: str) -> list[str]:
     lowered = response.lower()
+    heading_pattern = re.compile(r"\*\*(?P<heading>[^*\n]+)\*\*")
+    headings = [match.group("heading").strip() for match in heading_pattern.finditer(response)]
+
+    def has_heading(heading: str) -> bool:
+        return heading in headings
+
+    def has_heading_prefix(prefix: str) -> bool:
+        return any(heading.startswith(prefix) for heading in headings)
+
+    def heading_body(heading: str) -> str:
+        marker = f"**{heading}**"
+        start = response.find(marker)
+        if start == -1:
+            return ""
+        body_start = start + len(marker)
+        next_heading = heading_pattern.search(response, body_start)
+        if next_heading:
+            return response[body_start:next_heading.start()]
+        return response[body_start:]
+
+    confidence_body = heading_body("Confidence").lower()
+    confidence_match = re.match(
+        r"\s*[:：]?\s*(high|medium|low|高|中|低)(?![-a-z])\b",
+        confidence_body,
+    )
+    valid_confidence = confidence_match is not None and confidence_match.group(1) in {
+        "high",
+        "medium",
+        "low",
+        "高",
+        "中",
+        "低",
+    }
+    next_move_body = heading_body("Next Move")
     checks = {
-        "bold target model": any(
-            text in lowered
-            for text in ("clean target", "target model", "干净目标", "目标模型")
-        ),
+        "thesis heading": has_heading("Thesis"),
+        "confidence": has_heading("Confidence") and valid_confidence,
+        "the trap": has_heading("The Trap"),
+        "high-格局 direction": has_heading("High-格局 Direction"),
+        "frame-opening move": has_heading("Frame-Opening Move"),
+        "bold takes heading": has_heading("Bold Takes"),
+        "options heading": has_heading("Options"),
+        "what not to do": has_heading("What Not To Do"),
+        "first proof point": has_heading("First Proof Point"),
+        "falsifier": has_heading("Falsifier"),
+        "payoff ledger": has_heading_prefix("Payoff Ledger"),
+        "next move question": has_heading("Next Move")
+        and any(mark in next_move_body for mark in ("?", "？")),
+        "bold target model": has_heading("High-格局 Direction")
+        and any(text in lowered for text in ("clean target", "target model", "干净目标", "目标模型")),
         "deletion or reframing": any(
             text in lowered for text in ("delete", "kill", "reframe", "删除", "砍掉", "重塑")
         ),
         "options tradeoff": any(text in lowered for text in ("conservative", "保守"))
         and any(text in lowered for text in ("clean", "干净")),
-        "proof point": any(text in lowered for text in ("proof point", "证明点")),
-        "falsifier": any(text in lowered for text in ("falsifier", "证伪")),
+        "proof point": has_heading("First Proof Point")
+        and any(text in lowered for text in ("proof point", "证明点")),
+        "falsifier content": has_heading("Falsifier")
+        and any(text in lowered for text in ("falsifier", "证伪")),
     }
     return [name for name, passed in checks.items() if not passed]
 
@@ -467,6 +514,68 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn("进入 `brainstorming` 细化设计", chinese)
         self.assertIn("不要预选落地版方案", chinese)
 
+    def test_takeoff_returns_to_verification_not_execution(self) -> None:
+        english = (TAKEOFF_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (TAKEOFF_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("Bring it back to verification", english)
+        self.assertIn("verification questions", english)
+        self.assertIn("Landing owns feasibility repricing", english)
+        self.assertNotIn("Bring it back to execution", english)
+        self.assertNotIn("first irreversible decision", english)
+
+        self.assertIn("回到验证", chinese)
+        self.assertIn("验证问题", chinese)
+        self.assertIn("Landing 负责可行性重定价", chinese)
+        self.assertNotIn("回到执行", chinese)
+        self.assertNotIn("第一个不可逆决策", chinese)
+
+    def test_takeoff_landing_pair_uses_context_not_redundant_handoff(self) -> None:
+        takeoff_english = (TAKEOFF_DIR / "SKILL.md").read_text(encoding="utf-8")
+        takeoff_chinese = (TAKEOFF_DIR / "SKILL.zh_CN.md").read_text(
+            encoding="utf-8"
+        )
+        landing_english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
+        landing_chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(
+            encoding="utf-8"
+        )
+
+        self.assertIn("Do not add a separate hypothesis handoff", takeoff_english)
+        self.assertIn("landing can read the current context", takeoff_english)
+        self.assertIn("receives the takeoff hypothesis", landing_english)
+        self.assertIn("recoverable from the current context", landing_english)
+
+        self.assertIn("同一对话里不要额外输出假设交接包", takeoff_chinese)
+        self.assertIn("landing 可以读取当前上下文", takeoff_chinese)
+        self.assertIn("接收 takeoff 假设", landing_chinese)
+        self.assertIn("能从当前上下文恢复", landing_chinese)
+        self.assertNotIn("**Bold Thesis** / **Old Model** / **Main Reality Question**", takeoff_english)
+        self.assertNotIn("**Bold Thesis** / **Old Model** / **Main Reality Question**", takeoff_chinese)
+
+    def test_takeoff_requires_judgment_before_brainstorming_flow(self) -> None:
+        english = (TAKEOFF_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (TAKEOFF_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("If `brainstorming` also applies", english)
+        self.assertIn("deliver the `takeoff` judgment first", english)
+        self.assertIn("before any clarifying-question workflow begins", english)
+
+        self.assertIn("如果 `brainstorming` 也适用", chinese)
+        self.assertIn("先交付 `takeoff` 判断", chinese)
+        self.assertIn("再进入澄清问题流程", chinese)
+
+    def test_landing_requires_judgment_before_brainstorming_flow(self) -> None:
+        english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("If `brainstorming` also applies", english)
+        self.assertIn("deliver the `landing` judgment first", english)
+        self.assertIn("before any brainstorming-style clarification begins", english)
+
+        self.assertIn("如果 `brainstorming` 也适用", chinese)
+        self.assertIn("先交付 `landing` 判断", chinese)
+        self.assertIn("再开始任何 brainstorming 式澄清", chinese)
+
     def test_output_templates_are_not_used_for_dialogue_skills(self) -> None:
         self.assertFalse((TAKEOFF_DIR / "references" / "output-template.md").exists())
         self.assertFalse((LANDING_DIR / "references" / "output-template.md").exists())
@@ -549,7 +658,7 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn("Automatically use this skill only after `takeoff`", english)
         self.assertIn("User-explicit `landing` requests are valid triggers", english)
         self.assertIn("prior direction", english)
-        self.assertIn("valid input must name", english)
+        self.assertIn("valid context must make", english)
         self.assertIn("bold thesis", english)
         self.assertIn("old model it replaces", english)
         self.assertIn("main reality question", english)
@@ -559,7 +668,7 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn("自动触发只在 `takeoff`", chinese)
         self.assertIn("用户明确要求 `landing` 是有效触发", chinese)
         self.assertIn("前序方向", chinese)
-        self.assertIn("有效输入必须说清", chinese)
+        self.assertIn("有效上下文必须能恢复", chinese)
         self.assertIn("bold thesis", chinese)
         self.assertIn("它替代的旧模型", chinese)
         self.assertIn("主要现实疑问", chinese)
@@ -894,12 +1003,19 @@ class LandingSkillScopeTests(unittest.TestCase):
             "这样改动小，也比较稳。"
         )
         takeoff_output = (
-            "Thesis: clean target model 是 takeoff 打开方向、landing 压测方向，"
-            "不要用中间模板文件承载对话状态。Bold take: delete output-template, "
-            "reframe landing as pressure test only. Options: Conservative path 保留模板；"
+            "**Thesis** clean target model 是 takeoff 打开方向、landing 压测方向，"
+            "不要用中间模板文件承载对话状态。**Confidence** medium because we still need "
+            "to inspect real user contracts. **The Trap** inherited compatibility fear "
+            "around output-template is not a real contract. **High-格局 Direction** "
+            "make takeoff the target model and stop using template files as state. "
+            "**Frame-Opening Move** Zero-Legacy Thought Experiment. **Bold Takes** delete output-template, "
+            "reframe landing as pressure test only. **Options** Conservative path 保留模板；"
             "Clean target 删除模板；Staged clean path 先删模板再加测试。"
-            "First Proof Point: forward test 证明不自动跳阶段。"
-            "Falsifier: 无 skill baseline 已经同样提出干净目标。"
+            "**What Not To Do** avoid keeping template files as shim state. "
+            "**First Proof Point** forward test 证明不自动跳阶段。"
+            "**Falsifier** 无 skill baseline 已经同样提出干净目标。"
+            "**Payoff Ledger (收益账单)** delete the template now to remove phase-jump confusion in "
+            "the next agent reply. **Next Move** 要不要 route to landing for feasibility pressure?"
         )
         generic_landing_baseline = (
             "可以先分阶段推进：第一阶段改文档，第二阶段测试，第三阶段上线。"
@@ -970,6 +1086,117 @@ class LandingSkillScopeTests(unittest.TestCase):
         self.assertIn("repriced verification dimension", merged_failures)
         self.assertIn("repriced stop rule dimension", merged_failures)
         self.assertEqual([], evaluate_landing_quality(landing_output))
+
+    def test_takeoff_quality_rubric_rejects_partial_judgment(self) -> None:
+        partial_takeoff = (
+            "格局判断：先打开方向。下一步：认可就进 brainstorming 细化；"
+            "太飘就用 landing 压实。"
+        )
+
+        failures = evaluate_takeoff_quality(partial_takeoff)
+
+        self.assertIn("confidence", failures)
+        self.assertIn("the trap", failures)
+        self.assertIn("frame-opening move", failures)
+        self.assertIn("what not to do", failures)
+        self.assertIn("payoff ledger", failures)
+        self.assertIn("next move question", failures)
+
+    def test_landing_short_dialogue_requires_full_judgment_content(self) -> None:
+        english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("Short dialogue means no headings, not partial judgment", english)
+        self.assertIn("still has to cover Value Ranking", english)
+        self.assertIn("If those elements are missing, the landing failed", english)
+
+        self.assertIn("短对话不等于可以只给半份判断", chinese)
+        self.assertIn("仍然必须覆盖 Value Ranking", chinese)
+        self.assertIn("缺任何一块，都算这次 landing 失败", chinese)
+
+    def test_takeoff_formal_output_requires_exact_headings_and_next_move_question(self) -> None:
+        english = (TAKEOFF_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (TAKEOFF_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("Use the exact headings", english)
+        self.assertIn("Formal answer self-check", english)
+        self.assertIn("Do not rename required headings", english)
+        self.assertIn("phase-specific headings", english)
+        self.assertIn("Confidence level must be exactly high, medium, or low", english)
+        self.assertIn("Frame-Opening Move must be explicit", english)
+        self.assertIn("Next Move must ask", english)
+
+        self.assertIn("使用固定标题", chinese)
+        self.assertIn("正式回答发送前自检", chinese)
+        self.assertIn("不要改写必需标题", chinese)
+        self.assertIn("阶段特定标题", chinese)
+        self.assertIn("Confidence 等级只能是 high、medium 或 low", chinese)
+        self.assertIn("Frame-Opening Move 必须显式点名", chinese)
+        self.assertIn("下一步必须询问", chinese)
+
+    def test_takeoff_quality_rubric_rejects_implicit_frame_move(self) -> None:
+        implicit_frame_move = (
+            "**Thesis** clean target model 是删掉万能 router。**Confidence** medium. "
+            "**The Trap** compatibility fear is not real. **High-格局 Direction** keep "
+            "takeoff as the target model. **Bold Takes** delete fixed two-question router. "
+            "**Options** Conservative path 保留；Clean target 删除；Staged clean path 先测。"
+            "**What Not To Do** avoid pre-routing all users. **First Proof Point** check "
+            "whether real prompts need clarification. **Falsifier** most prompts are ambiguous. "
+            "**Payoff Ledger (收益账单)** delete the router now to remove needless interruption. "
+            "**Next Move** 要不要 route to landing? "
+            "This uses Kill The Wrong Concept."
+        )
+
+        failures = evaluate_takeoff_quality(implicit_frame_move)
+
+        self.assertIn("frame-opening move", failures)
+
+    def test_takeoff_quality_rubric_rejects_hybrid_confidence_level(self) -> None:
+        hybrid_confidence = (
+            "**Thesis** clean target model 是删掉万能 router。**Confidence** medium-high. "
+            "**The Trap** compatibility fear is not real. **High-格局 Direction** keep "
+            "takeoff as the target model. **Frame-Opening Move** Kill The Wrong Concept. "
+            "**Bold Takes** delete fixed two-question router. **Options** Conservative "
+            "path 保留；Clean target 删除；Staged clean path 先测。**What Not To Do** "
+            "avoid pre-routing all users. **First Proof Point** check whether real "
+            "prompts need clarification. **Falsifier** most prompts are ambiguous. "
+            "**Payoff Ledger (收益账单)** delete the router now to remove needless interruption. "
+            "**Next Move** 要不要 route to landing?"
+        )
+
+        failures = evaluate_takeoff_quality(hybrid_confidence)
+
+        self.assertIn("confidence", failures)
+
+    def test_takeoff_quality_rubric_rejects_wrong_heading_and_non_question_next_move(self) -> None:
+        wrong_heading = (
+            "**Thesis** clean target model 是删掉万能 router。**Confidence** medium. "
+            "**The Trap** compatibility fear is not real. **High-Level Direction** keep "
+            "takeoff as the target model. **Frame-Opening Move** Kill The Wrong Concept. "
+            "**Bold Takes** delete fixed two-question router. **Options** Conservative "
+            "path 保留；Clean target 删除；Staged clean path 先测。**What Not To Do** "
+            "avoid pre-routing all users. **First Proof Point** check whether real "
+            "prompts need clarification. **Falsifier** most prompts are ambiguous. "
+            "**Payoff Ledger (收益账单)** delete the router now to remove needless interruption. "
+            "**Next Move** Route to landing for feasibility pressure."
+        )
+
+        failures = evaluate_takeoff_quality(wrong_heading)
+
+        self.assertIn("high-格局 direction", failures)
+        self.assertIn("next move question", failures)
+
+    def test_landing_output_self_check_prevents_compressed_repricing(self) -> None:
+        english = (LANDING_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (LANDING_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("Formal answer self-check", english)
+        self.assertIn("Do not merge Cost, Risk, Stage Boundary, Verification, and Stop Rule", english)
+        self.assertIn("Do not compress Value Ranking evidence fields", english)
+
+        self.assertIn("正式回答发送前自检", chinese)
+        self.assertIn("不要把成本、风险、阶段边界、验证和止损合并成一段", chinese)
+        self.assertIn("不要压缩价值排序的证据字段", chinese)
 
 
 if __name__ == "__main__":

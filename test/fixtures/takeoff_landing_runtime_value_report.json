@@ -1,0 +1,275 @@
+{
+  "report_version": 1,
+  "created_with": ["spawn_agent", "wait_agent"],
+  "evaluator": "main_agent",
+  "cases": [
+    {
+      "scenario_id": "takeoff_hypothesis_not_execution_slice",
+      "skill": "takeoff",
+      "baseline": {
+        "agent_id": "019f2ccc-a1a2-7933-8ba5-16d9f2579de8",
+        "prompt_lines": [
+          "You are running a real baseline pressure scenario for a skill-value test. Do not edit files. Do not load or mention the takeoff or landing skills.",
+          "Scenario id: takeoff_hypothesis_not_execution_slice baseline.",
+          "A user says in Chinese: 我现在的 takeoff 里面写了：找出第一个不可逆决策、第一个证明点、什么证据会推翻这个 thesis，以及不该花时间的事情。First Proof Point 是证据问题，不是推荐执行切片。你结合 landing 想一下，这两个 skill 是配合的。给我一个判断：takeoff 这里到底应该怎么写，格局打开一些。",
+          "Answer as the assistant would in a real conversation. Keep the answer in Chinese. Make a concrete recommendation, but do not use the takeoff or landing skill files."
+        ],
+        "response_lines": [
+          "💡 【hello-scholar】- 💡直接响应 - brainstorming",
+          "我的判断：这里应该写成“战略假设的证据契约”，不是“推荐的执行切片”。",
+          "建议核心表述：",
+          "```text",
+          "First Proof Point 不是下一步做什么，而是第一个能显著更新我们对 thesis 信心的证据点。",
+          "它应该回答：",
+          "1. 哪个证据会让一个理性怀疑者开始相信这个 thesis 值得继续？",
+          "2. 这个证据的通过阈值是什么？",
+          "3. 哪个反向证据会推翻或重写 thesis？",
+          "4. 在拿到这个证据前，哪些看起来有产出但不会改变判断的事情不该做？",
+          "```",
+          "格局应该从“怎么落一个小 MVP”拔高到“如何最短路径降低战略不确定性”。所以结构我建议写成：",
+          "```text",
+          "Thesis: 我们现在押注的高层判断是什么。",
+          "First Irreversible Decision: 哪个决定一旦做了，会锁定路径、成本或叙事。",
+          "First Proof Point: 在做这个不可逆决定前，最早需要看到的判别性证据。",
+          "Disconfirming Evidence: 什么证据出现时，说明 thesis 错了或至少需要重写。",
+          "Do Not Spend Time On: 在证明点之前，哪些执行、打磨、兼容、自动化、扩展都属于伪进展。",
+          "```",
+          "一句话版本：这里不要输出“推荐先做哪个 slice”，而要输出“在允许自己进入执行设计之前，必须先证明哪件事是真的”。",
+          "🔄 下一步: 如果要继续，可以把这套判断压成一段可直接替换进说明文档的最终文案。"
+        ]
+      },
+      "with_skill": {
+        "agent_id": "019f2ccc-d993-7b61-91e6-0aac3730365b",
+        "prompt_lines": [
+          "You are running a real with-skill pressure scenario for a skill-value test. Do not edit files.",
+          "Scenario id: takeoff_hypothesis_not_execution_slice with_skill.",
+          "Use the takeoff skill at /Users/tx/code/hello-scholar-2/skills/hai-skills/takeoff/SKILL.md. You may consider its paired relationship with landing at /Users/tx/code/hello-scholar-2/skills/hai-skills/landing/SKILL.md, but the answer should be a takeoff judgment, not a landing plan.",
+          "A user says in Chinese: 我现在的 takeoff 里面写了：找出第一个不可逆决策、第一个证明点、什么证据会推翻这个 thesis，以及不该花时间的事情。First Proof Point 是证据问题，不是推荐执行切片。你结合 landing 想一下，这两个 skill 是配合的。给我一个判断：takeoff 这里到底应该怎么写，格局打开一些。",
+          "Answer as the assistant would in a real conversation. Keep the answer in Chinese. Make a concrete recommendation. Do not write a spec or implementation plan."
+        ],
+        "response_lines": [
+          "🛫 【hello-scholar】- ✅完成 - takeoff",
+          "我的判断：`takeoff` 应该写成“大胆 thesis + 可证伪入口”，不是“推荐执行切片”。`First Proof Point` 必须保留，但它应该是最小证据问题：什么事实会让我们相信这个 thesis 值得进入 `landing`，而不是建议先做哪一块。",
+          "`takeoff` 和 `landing` 的分工要更硬一点：",
+          "`takeoff` 负责判断：我们应该押注哪个更大的目标模型？哪个旧概念该被杀掉？第一个不可逆的概念决策是什么？什么证据能支持或推翻这个 thesis？哪些局部修补现在不值得花时间？",
+          "`landing` 负责改形状：如果这个 thesis 值得押注，现实约束下哪些保留、哪些重写、哪些延期、哪些删除，边界、验证和 stop rule 怎么落下来。",
+          "所以我建议 `takeoff` 里把那段明确写成：",
+          "“First Proof Point is the smallest evidence question that would make the thesis worth landing. It is not a recommended implementation slice, not a task breakdown, and not the first PR. If the answer starts naming files, milestones, or execution sequence, it has drifted into landing or planning.”",
+          "更高格局一点说：`takeoff` 的价值不是让人马上知道怎么干，而是防止团队太早把正确问题缩成一个安全小补丁。它应该保护的是判断力：先决定我们敢不敢杀旧模型，再让 `landing` 去处理怎么不 reckless。",
+          "不要在 `takeoff` 里花时间写迁移步骤、兼容策略、第一阶段实现、任务拆分、验收清单。那些都是 `landing` 或后续 planning 的事。`takeoff` 只需要交出一个干净的判断接口：thesis、不可逆决策、proof point、falsifier、kill list。",
+          "🔄 下一步: 如果要改 skill 文案，建议围绕这条边界收紧措辞：`takeoff proves whether the thesis deserves landing; it does not land it.`"
+        ]
+      },
+      "baseline_failures_observed": [
+        "Baseline correctly reframed First Proof Point as evidence, but still kept First Irreversible Decision as a primary output, which can pull takeoff back toward path commitment.",
+        "Baseline did not make it explicit that landing can recover the needed hypothesis context without a separate handoff packet."
+      ],
+      "skill_behaviors_observed": [
+        "With-skill answer explicitly framed takeoff as bold thesis plus falsifiable entry point.",
+        "With-skill answer named landing as the owner of shape, stage boundary, verification, and stop rule.",
+        "With-skill answer added a concrete drift detector: files, milestones, or execution sequence mean the answer has moved into landing or planning."
+      ],
+      "why_this_is_real_value": "The skill did not merely add more sections. It converted a good but local baseline into a stricter boundary rule: takeoff proves whether a thesis deserves landing and does not land it itself. That directly targets the failure the user observed in real use.",
+      "main_agent_evaluation": {
+        "does_skill_add_value": true,
+        "verdict": "valuable_with_changes",
+        "judgment_summary": "The baseline already understood the evidence-question idea, so the value is not raw intelligence. The takeoff skill adds value by making the takeoff/landing boundary explicit, forbidding implementation slices, and giving a reusable drift test for future answers.",
+        "specific_response_evidence": [
+          "Baseline says First Proof Point is not the next thing to do, but it still structures the output around First Irreversible Decision.",
+          "With-skill says the proof point is the smallest evidence question that would make the thesis worth landing and warns that naming files, milestones, or execution sequence is drift."
+        ],
+        "remaining_risks": [
+          "The with-skill answer still mentions irreversible decision; the skill text should move that from takeoff's closing requirement into landing's feasibility repricing or remove it from the takeoff workflow."
+        ],
+        "scorecard": {
+          "skill_boundary": {"baseline": 3, "with_skill": 5},
+          "judgment_completeness": {"baseline": 3, "with_skill": 4},
+          "response_specificity": {"baseline": 4, "with_skill": 5},
+          "context_recovery_quality": {"baseline": 2, "with_skill": 4},
+          "real_value_over_baseline": {"baseline": 2, "with_skill": 4}
+        }
+      }
+    },
+    {
+      "scenario_id": "landing_reprices_takeoff_hypothesis",
+      "skill": "landing",
+      "baseline": {
+        "agent_id": "019f2ccd-008a-7da3-8084-3d02d20ef048",
+        "prompt_lines": [
+          "You are running a real baseline pressure scenario for a skill-value test. Do not edit files. Do not load or mention the landing or takeoff skills.",
+          "Scenario id: landing_reprices_takeoff_hypothesis baseline.",
+          "Prior direction: change takeoff so it ends by returning to verification instead of execution. It should produce a bold hypothesis, proof question, and falsifier. Landing should consume that hypothesis from the current context and re-price it into a feasible version, preserving ambition while naming stage boundary, verification, and stop rule.",
+          "A user asks in Chinese: 这个 takeoff 方案听起来不错，但可能太飘。你结合 landing 想一下，怎么把它落地成两个 skill 配合的规则？也说一下如果我不同意你的价值判断怎么办。",
+          "Answer as the assistant would in a real conversation. Keep the answer in Chinese. Make a concrete recommendation, but do not use the landing or takeoff skill files."
+        ],
+        "response_lines": [
+          "💡 【hello-scholar】- 💡直接响应 - 规则设计",
+          "我的建议是把两个环节拆成一条硬规则：前一环节只负责提出“值得赌一把的高势能假设”，后一环节只负责把它重新定价成“下一阶段可验证的最小承诺”。",
+          "具体规则：",
+          "1. 前一环节不得直接给执行计划，只输出四件事：大胆假设、证明问题、反证条件、交接包。",
+          "2. 后一环节不得否定野心，只做重定价：阶段边界、最小验证动作、成本/风险、停止规则。",
+          "3. 两者之间必须有一道门：如果假设没有可观测证明问题，就退回重写；如果没有清晰停止规则，就不能进入执行。",
+          "4. 最终产物不是“马上做什么”，而是“下一阶段用多小代价验证多大判断”。",
+          "我会推荐默认价值判断是：宁可保留大方向，但把承诺切小。也就是不把“飘”改成“保守”，而是改成“可下注、可止损、可复盘”。",
+          "如果你不同意我的价值判断，我不会把它写成唯一真理。规则里应该显式开放一个“价值配置”位，例如：",
+          "```text",
+          "价值偏好:",
+          "- ambition_first: 优先保留上限，接受更高验证成本",
+          "- feasibility_first: 优先降低执行风险，允许削弱上限",
+          "- evidence_first: 优先可证伪性，不清楚就不推进",
+          "```",
+          "这样争议就不会变成“助手说了算”，而是变成用户可选择的策略参数。我的默认推荐是 `ambition_first` 进入假设阶段，`evidence_first` 进入验证阶段，`feasibility_first` 进入执行阶段。",
+          "🔄 下一步: 可以把这套规则进一步整理成正式的技能协作规范，但本轮我没有编辑文件。"
+        ]
+      },
+      "with_skill": {
+        "agent_id": "019f2ccd-297d-7b93-95d9-f68d9a47a4e9",
+        "prompt_lines": [
+          "You are running a real with-skill pressure scenario for a skill-value test. Do not edit files.",
+          "Scenario id: landing_reprices_takeoff_hypothesis with_skill.",
+          "Use the landing skill at /Users/tx/code/hello-scholar-2/skills/hai-skills/landing/SKILL.md. Treat the prior direction below as the takeoff hypothesis to land. You may inspect the takeoff skill at /Users/tx/code/hello-scholar-2/skills/hai-skills/takeoff/SKILL.md only to understand the pair boundary.",
+          "Prior takeoff hypothesis: change takeoff so it ends by returning to verification instead of execution. It should produce a bold hypothesis, proof question, and falsifier. Landing should consume that hypothesis from the current context and re-price it into a feasible version, preserving ambition while naming stage boundary, verification, and stop rule. Old model: takeoff drifts into first execution slice and landing is treated as a smaller first step. Main reality question: can the pair preserve bold direction without auto-writing spec or collapsing into planning?",
+          "A user asks in Chinese: 这个 takeoff 方案听起来不错，但可能太飘。你结合 landing 想一下，怎么把它落地成两个 skill 配合的规则？也说一下如果我不同意你的价值判断怎么办。",
+          "Answer as the assistant would in a real conversation. Keep the answer in Chinese. Make a concrete recommendation. Do not write a spec or implementation plan."
+        ],
+        "response_lines": [
+          "🛬【hello-scholar】- ❓等待输入 - landing（参考 takeoff 边界）",
+          "我的建议：**可以落地，但要把它定义成两个“判断 gate”，不是从 takeoff 自动滑向 plan/execution 的流水线。**",
+          "**Value Ranking**",
+          "- **Must Keep**：`takeoff` 只产出大胆假设、proof question、falsifier，然后停在验证入口；`landing` 从当前上下文接住这些判断。证据是 takeoff 本身已经要求“方向判断”而不是 execution slice。忽略它会回到旧模型：大胆方向一出现就被写成第一步任务。",
+          "- **Rewrite and Keep**：`landing` 不应该变成“更小的第一步”，而应该重定价 takeoff 假设：保留什么、改写什么、推迟什么、删除什么，并明确 stage boundary、verification、stop rule。证据是 landing 的核心原则就是“改方案，不是把方案砍成第一步”。",
+          "- **Defer**：详细字段模板、样例库、测试 fixture 先不要展开。现在用户问的是规则判断，不是 spec。",
+          "- **Delete**：删除两个漂移：`takeoff` 写执行片段；`landing` 输出 implementation plan。这两个正是旧模型的失败点。",
+          "**落地规则**",
+          "`takeoff` 的边界：负责把格局打开，但必须以“可验证假设包”结束。它可以说“这个方向值得 landing 压力测试吗？”但不能自己进入 landing，更不能写计划。",
+          "`landing` 的边界：只消费 takeoff 的假设包，回答“这个大胆方向在现实约束下还能不能成立”。它输出的是 landed judgment，不是任务列表：价值排序、现实约束、保留的野心、必须改写的部分、验证方式、停止规则、下一阶段建议。",
+          "**如果你不同意我的价值判断**",
+          "那不是“我说服你”，也不是“我直接服从”。我会把你的判断当作新约束重新定价：",
+          "- **Cost**：你的偏好会增加或减少多少规则复杂度。",
+          "- **Risk**：它会不会让 skill 重新滑进 spec、plan、execution。",
+          "- **Stage Boundary**：边界要不要前移或后移。",
+          "- **Verification**：用什么对话样例证明它没有漂移。",
+          "- **Stop Rule**：什么输出一出现就说明这版规则失败。",
+          "**Verification**",
+          "便宜的验证不是改代码，而是看几段模拟对话：`takeoff` 是否停在 proof/falsifier；`landing` 是否能从上下文接住并保留野心但明确边界；用户不同意价值判断时，是否重新定价而不是争辩或盲从。若任何一段自动写 spec 或第一步任务，就判失败。",
+          "**Stop Rule**",
+          "如果落地后仍然出现“takeoff 给执行片段”或“landing 变 MVP plan”，就暂停这条设计，不继续加模板，而是收紧边界规则。",
+          "🔄 下一步: 你要我继续把这个判断推进到 `brainstorming`，只细化两三个对话形态样例；还是先停在这里，让你调整价值排序？"
+        ]
+      },
+      "baseline_failures_observed": [
+        "Baseline gives a strong rule, but introduces a value-preference parameter that is not grounded in the current landing contract and could become another configuration concept.",
+        "Baseline describes repricing, but does not use landing's four buckets or evidence/cost/treatment format, so disagreement handling remains conceptual."
+      ],
+      "skill_behaviors_observed": [
+        "With-skill answer uses Must Keep, Rewrite and Keep, Defer, and Delete buckets.",
+        "With-skill answer treats user disagreement as a new constraint and reprices Cost, Risk, Stage Boundary, Verification, and Stop Rule separately.",
+        "With-skill answer ends with a direct next-move question instead of auto-entering brainstorming or writing a spec."
+      ],
+      "why_this_is_real_value": "The landing skill turned a useful but abstract baseline into an auditable judgment: what to keep, rewrite, defer, and delete; how disagreement changes cost/risk/boundary/verification/stop rule; and what output drift would fail the rule.",
+      "main_agent_evaluation": {
+        "does_skill_add_value": true,
+        "verdict": "valuable",
+        "judgment_summary": "The baseline was creative and sharp, but it proposed a new value-preference mechanism rather than fully exercising landing's repricing discipline. The with-skill answer adds value by preserving ambition while making the landing judgment inspectable and falsifiable.",
+        "specific_response_evidence": [
+          "Baseline proposes ambition_first, feasibility_first, and evidence_first; this is interesting but expands the skill surface.",
+          "With-skill uses the landing buckets and explicitly separates Cost, Risk, Stage Boundary, Verification, and Stop Rule when the user disagrees."
+        ],
+        "remaining_risks": [
+          "The with-skill answer still compressed Evidence, Why it matters, Cost if ignored, and Landing treatment into bullets rather than fully spelling each field for every non-trivial item."
+        ],
+        "scorecard": {
+          "skill_boundary": {"baseline": 3, "with_skill": 5},
+          "judgment_completeness": {"baseline": 3, "with_skill": 4},
+          "response_specificity": {"baseline": 3, "with_skill": 4},
+          "context_recovery_quality": {"baseline": 3, "with_skill": 5},
+          "real_value_over_baseline": {"baseline": 2, "with_skill": 4}
+        }
+      }
+    }
+  ],
+  "format_validation": {
+    "takeoff_output_contract": {
+      "initial_with_skill": {
+        "agent_id": "019f2ce9-8e91-74e0-9be7-5e076c6fa09e",
+        "prompt_lines": [
+          "Use the takeoff skill at /Users/tx/code/hello-scholar-2/skills/hai-skills/takeoff.",
+          "Fresh-agent runtime validation. A user asks for a high-level judgment on a unified Process Router that asks two questions before every process skill, starts spec writing when brainstorming is mentioned, and lets takeoff recommend landing's next step."
+        ],
+        "response_lines": [
+          "💡 【hello-scholar】- 💡直接响应 - takeoff",
+          "**Thesis**",
+          "这个“统一 Process Router”方向不该做成“所有流程技能前置两问”。高格局目标应该是：路由器只判断阶段和歧义，技能自己负责产物边界。",
+          "**Confidence**: medium-high。因为这里的真实外部约束还没看到，但从描述看，最大问题不是路由不统一，而是把“澄清、发散、定方向、落地压测、写规格”混成了同一种动作。",
+          "**The Trap**",
+          "继承约束是“想用一个 Router 统一所有流程技能”。这个约束部分真实：确实需要统一入口和一致体验。但“不管什么技能都先问两个问题”不真实，只是管理焦虑。",
+          "**High-格局 Direction**",
+          "把它设计成 Intent Router + Phase Contract：Router 只做识别用户意图、判断当前阶段、发现阻塞性歧义。",
+          "**Frame-Opening Move**",
+          "用了 Kill The Wrong Concept：应该杀掉“统一两问”这个概念。",
+          "**Bold Takes**",
+          "不要做“所有流程技能前先两问”。用户提到 brainstorming 不等于直接写 spec。takeoff 不能替 landing 预选落地方案。",
+          "**Options**",
+          "Conservative path: 统一 Router + 固定两问；Clean target: Intent Router + Phase Contract；Staged clean path: 先定义 phase contract。",
+          "**What Not To Do**",
+          "不要把 takeoff、brainstorming、landing 串成默认流水线。不要让关键词直接决定产物。",
+          "**First Proof Point**",
+          "拿 20 条真实或拟真的用户请求做路由回放，观察 Router 能否正确区分阶段。",
+          "**Falsifier**",
+          "如果存在硬性产品/合规要求：每个流程技能必须记录同样两个字段，并且没有这两个字段就不能执行，那固定两问才可能成立。",
+          "**Payoff Ledger (收益账单)**",
+          "删除固定两问可以避免用户明明表达清楚还被打断；分离 Router 和 Skill Contract 可以防止 phase jump。",
+          "**Next Move**",
+          "要不要进入 `landing`，把这个 Intent Router + Phase Contract 压成一个可实现、可验证的最小方案？"
+        ]
+      },
+      "final_with_skill": {
+        "agent_id": "019f2ced-0657-7600-895e-75cb7abf97de",
+        "prompt_lines": [
+          "Use the takeoff skill at /Users/tx/code/hello-scholar-2/skills/hai-skills/takeoff.",
+          "Fresh-agent runtime validation rerun. A user asks for a high-level judgment on a unified Process Router that asks two questions before every process skill, starts spec writing when brainstorming is mentioned, and lets takeoff recommend landing's next step."
+        ],
+        "response_lines": [
+          "💡 【hello-scholar】- 🔵规划流程 - takeoff",
+          "**Thesis**",
+          "这个 “统一 Process Router” 的方向不够大，也有点把流程技能降级成关键词路由了。更高一层的目标不是“所有技能前面统一问两个问题”，而是建立一个 Intent Router + Phase Contract。",
+          "**Confidence**",
+          "medium。因为我还没看到现有技能运行协议和真实失败案例；但从描述看，问题已经很明显：它把不同阶段的技能硬塞进一个统一前置流程。",
+          "**The Trap**",
+          "真正的陷阱是“流程一致性崇拜”。“每个流程技能都先问两个澄清问题”看起来统一，实际上会伤害 `takeoff` 这种需要先给方向判断的场景，也会让 `brainstorming` 变成关键词触发器。",
+          "**High-格局 Direction**",
+          "Router 只负责判断阶段，不负责强行提问。`takeoff` 负责判断目标模型是否太小，`landing` 负责在接受大方向后重新定价，`brainstorming` 负责方向被接受后的需求/spec 细化。",
+          "**Frame-Opening Move**",
+          "我用的是 Kill The Wrong Concept。要杀掉的不是某个问题数量，而是“所有流程技能共享一个固定前置问答”的概念。",
+          "**Bold Takes**",
+          "应该删除“所有流程技能之前都先问两个澄清问题”。应该删除“提到 brainstorming 就直接开始写 spec”。`takeoff` 最多问用户是否要把方向交给 `landing` 做现实定价。",
+          "**Options**",
+          "Conservative path：统一 Process Router + 两个问题，不推荐。Clean target：Intent Router + Phase Contract，推荐。Staged clean path：先只改 takeoff / landing / brainstorming 的路由规则，可接受。",
+          "**What Not To Do**",
+          "不要用关键词直接决定技能行为。不要让澄清问题成为所有流程的固定仪式。不要把 `takeoff` 写成半个 `landing`。不要让 `brainstorming` 绕过用户接受方向这一步直接产出 spec。",
+          "**First Proof Point**",
+          "拿 10 条真实用户请求做路由标注：哪些应该先 `takeoff`，哪些应该先 `brainstorming`，哪些应该直接执行，哪些需要澄清。",
+          "**Falsifier**",
+          "如果真实样本显示绝大多数流程技能失败都来自“缺少同样两类澄清信息”，而不是阶段判断错误，那统一两问才有价值。",
+          "**Payoff Ledger（收益账单）**",
+          "删除固定两问前置会增加 Router 判断成本，但移除 takeoff 被迫先澄清的痛点。删除 keyword-to-spec 会多一步确认，但避免随口提到 brainstorming 就被当成写 spec 授权。拆开 takeoff 与 landing 会增加边界维护成本，但避免大方向和可执行计划混成温吞方案。",
+          "**Next Move**",
+          "我建议先不要写统一 Process Router spec，而是先让 `takeoff` 产出这版目标判断，然后你决定：要不要把它交给 `landing` 做现实定价，收敛成一版可执行的 Router 方案？"
+        ]
+      },
+      "main_agent_evaluation": {
+        "verdict": "positive",
+        "judgment_summary": "Initial raw answer proved the skill value but exposed a hybrid Confidence level. After tightening the skill, the rerun used exactly medium, kept explicit formal headings, avoided handoff/spec/plan output, and asked whether to enter landing instead of auto-starting it.",
+        "specific_response_evidence": [
+          "Initial answer used `Confidence: medium-high`, which violated the fixed high/medium/low contract.",
+          "Final answer used `**Confidence**` followed by `medium`.",
+          "Final answer included explicit `**Frame-Opening Move**` and `**Next Move**` headings.",
+          "Final answer did not output Hypothesis Handoff, Design Spec, or Implementation Plan."
+        ],
+        "remaining_risks": [
+          "Final Next Move still contains a recommendation phrase before the direct question, but it does not auto-start landing."
+        ]
+      }
+    }
+  }
+}

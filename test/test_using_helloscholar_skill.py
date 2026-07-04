@@ -67,6 +67,13 @@ class UsingHelloScholarSkillTests(unittest.TestCase):
             """,
         )
 
+    def test_skill_priority_lists_takeoff_and_landing_as_process_skills(self) -> None:
+        english = (SKILL_DIR / "SKILL.md").read_text(encoding="utf-8")
+        chinese = (SKILL_DIR / "SKILL.zh_CN.md").read_text(encoding="utf-8")
+
+        self.assertIn("brainstorming, debugging, takeoff, landing", english)
+        self.assertIn("takeoff、landing、brainstorming、debugging", chinese)
+
 
 if __name__ == "__main__":
     unittest.main()

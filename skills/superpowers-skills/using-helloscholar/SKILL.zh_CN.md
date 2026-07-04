@@ -98,7 +98,7 @@ digraph skill_flow {
 
 当多个技能可能适用时，按此顺序使用：
 
-1. **流程技能优先**（brainstorming、debugging）——它们决定如何处理任务
+1. **流程技能优先**（takeoff、landing、brainstorming、debugging）——它们决定如何处理任务
 2. **实现技能其次**（frontend-design、mcp-builder）——它们指导执行
 
 "Let's build X" → 先 brainstorming，再 implementation skills。

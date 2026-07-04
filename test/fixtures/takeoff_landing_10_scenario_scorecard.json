@@ -1,0 +1,349 @@
+{
+  "report_version": 1,
+  "evaluation_protocol": {
+    "protocol_id": "takeoff_landing_10_scenario_quality_gate",
+    "protocol_version": 1,
+    "path": "test/fixtures/takeoff_landing_10_scenario_protocol.json"
+  },
+  "created_with": [
+    "spawn_agent",
+    "wait_agent",
+    "subagent_rerun",
+    "main_agent_review"
+  ],
+  "scored_by": "subagent_grader_strict_manual_contract_review + final_doc_quality_grader",
+  "pass_threshold": 98,
+  "overall_score": 98.62,
+  "scoring_notes": [
+    "首轮 10 个真实 answer 子代理整体 answer score 为 98.38，但 L2/L3 landing 缺少用户不同意时的五维重定价，文档质量也未达 98，因此判定未通过。",
+    "修订 landing hard gate 和精炼 takeoff/landing 文档后，L2/L3 重新用 fresh 子代理复测通过；最终文档质量由独立 grader 评为 takeoff 98.4、landing 98.6。"
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "T1",
+      "skill": "takeoff",
+      "prompt": "统一 Process Router 压力场景：用户想把 brainstorming、debugging、takeoff、landing 全部放进统一流程，所有流程技能触发前先问两个问题；只要提到 brainstorming 就写 spec；takeoff 后自动接 landing；landing 后自动进 brainstorming。要求使用 takeoff 判断这个方向是不是该做，不写 spec，不写 implementation plan，不自动切换阶段。",
+      "raw_response": "【takeoff】Thesis: 应该做统一的流程治理，但不应该做自动 Process Router。高格局方向是轻量 Process Governor，统一入口判断、边界纪律和用户同意机制，而不是把所有流程技能串成自动流水线。\nConfidence: medium。没有检查真实 router 代码，但自动链路会破坏 takeoff/landing 当前最重要的边界。\nThe Trap: 把统一误解成中心化强控。真实约束是用户意图和交互控制权，不是旧 skill 边界绑架。\nHigh-格局 Direction: 统一路由协议，不统一流程内容；router 识别意图、冲突和是否需要确认；skill 保留自己的产物边界。\nFrame-Opening Move: Kill The Wrong Concept，杀掉自动流程流水线。\nBold Takes: 删除关键词即 spec、固定两问、takeoff 自动 landing、landing 自动 brainstorming；保留统一仲裁。\nOptions: Conservative path 不推荐；Clean target 是 Process Governor；Staged clean path 最推荐。\nWhat Not To Do: 不要关键词即执行，不要固定两问仪式，不要把 takeoff->landing->brainstorming 变默认管线。\nFirst Proof Point: 过去 10 个真实场景里，混乱主要来自入口判断不一致，还是自动越界/串联？\nFalsifier: 如果真实日志显示用户几乎总是明确要求连续执行多个流程，且自动链路不误产出，则 thesis 变弱。\nPayoff Ledger: 删除自动 phase chaining 避免 takeoff 被误升级成 landing 计划；删除关键词即 spec 避免提到 brainstorming 就误写 spec；建立 Process Governor 让冲突有单一裁判。\nNext Move: 要继续只在 takeoff 层重判这个 thesis，还是转 landing 压一遍可行边界？",
+      "answer_agent_id": "019f2d0b-c639-7572-afeb-42db6f6b2cb8",
+      "grader_agent_id": "019f2d11-a9f4-79f2-8916-3e86097384a3",
+      "pressure_tags": [
+        "multi_skill_conflict",
+        "brainstorming_spec_drift",
+        "auto_phase_switch"
+      ],
+      "scores": {
+        "output_contract": 100,
+        "skill_boundary": 99,
+        "judgment_value": 98,
+        "specificity": 97,
+        "next_phase_control": 99
+      },
+      "total_score": 98.6,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "required takeoff headings present; Confidence=medium; Next Move is a direct question",
+        "keeps Process Governor at judgment layer; specificity limited by no router/code inspection"
+      ]
+    },
+    {
+      "scenario_id": "T2",
+      "skill": "takeoff",
+      "prompt": "Citation pipeline 兼容焦虑场景：用户有 CitationManager、CitationService、CitationContext、legacy_resolver 四套概念，保守方案是在旁边加 UnifiedCitationFacade，新调用走 facade，旧调用不动。已知没有公开 API，只有内部调用和少量测试，但 diff 会很大且同事习惯旧名字。要求使用 takeoff 判断保留什么、删什么，并显式区分真实契约与内部惯性，不允许写迁移计划或预选 landing 方案。",
+      "raw_response": "【takeoff】Thesis: 不要加 UnifiedCitationFacade。没有公开 API、持久化契约、外部集成时，facade 只会把四套概念变成五套概念；正确方向是收敛成一个引用管线事实模型，内部调用方直接迁过去。\nConfidence: medium。没看代码，不能断言每个旧概念的真实职责，但给出的约束足以推翻为了兼容旧名字加 facade。\nThe Trap: 同事习惯旧名字和 diff 大不是硬约束；公开 API、持久化数据、文档集成、部署依赖或用户承诺才是硬约束。\nHigh-格局 Direction: 目标不是统一入口，而是统一概念。保留一个真正的 citation pipeline owner；CitationContext 只有承载真实运行上下文才保留；CitationManager 和 legacy_resolver 默认进入删除名单。\nFrame-Opening Move: Kill The Wrong Concept + Zero-Legacy Thought Experiment。\nBold Takes: UnifiedCitationFacade 是兼容焦虑；Manager/Service 重叠必须合并；legacy_resolver 只有代表真实 legacy input 才改为 adapter。\nOptions: Conservative path 加 facade 不推荐；Clean target 一次收敛最干净；Staged clean path 推荐，目标仍是删除旧概念。\nWhat Not To Do: 不要为了同事熟悉保留旧名；不要新增没有删除条件的 facade；不要让测试名词定义产品模型。\nFirst Proof Point: 四个概念里是否存在两个以上同时拥有 citation 生命周期决策权？\nFalsifier: 如果旧名字被外部脚本、文档化插件、persisted records、部署配置或跨团队约定依赖，就需要迁移契约。\nPayoff Ledger: 不加 facade 避免第五套概念；合并 owner 让失败处理、缓存、日志不再分裂；重新审判 Context 避免巨型隐式依赖。\nNext Move: 要进入 brainstorming 细化目标模型，还是继续重判唯一 owner 应该叫 Service、Resolver 还是 Pipeline？",
+      "answer_agent_id": "019f2d0c-09fc-7c52-8c33-38201fe1e039",
+      "grader_agent_id": "019f2d11-a9f4-79f2-8916-3e86097384a3",
+      "pressure_tags": [
+        "compatibility_worship",
+        "internal_callers",
+        "concept_deletion"
+      ],
+      "scores": {
+        "output_contract": 98,
+        "skill_boundary": 99,
+        "judgment_value": 99,
+        "specificity": 99,
+        "next_phase_control": 97
+      },
+      "total_score": 98.4,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "required headings, falsifier, payoff ledger, concrete kill list all present",
+        "Next Move asks brainstorming/rejudge but omits landing option, so phase-control is good but not perfect"
+      ]
+    },
+    {
+      "scenario_id": "T3",
+      "skill": "takeoff",
+      "prompt": "Onboarding 产品方向场景：用户准备加每日提示、新手 checklist、文档入口卡片，但怀疑只是局部补丁，没有解决用户不知道何时用哪个 skill、何时问人、何时让 agent 自己推进的问题。要求不被现有 UI 和文档结构绑架，给 takeoff 高层判断；必须输出可证伪的方向判断、避免直接进入产品 brainstorming，也不能写 UI spec 或任务计划。场景压力点是入口教育、协作边界、产品形态三者很容易被混成一个安全但低杠杆的功能堆。",
+      "raw_response": "【takeoff】Thesis: 不要把 onboarding 做成更多入口，而要做成协作驾驶舱：持续判断用户当前工作状态，并告诉他此刻该用 skill、该问人、还是该让 agent 自己推进。这不是文档发现问题，而是决策权分配问题。\nConfidence: medium。没有真实用户日志，但症状显示根因是缺可见协作模型。\nThe Trap: 每日提示、checklist、入口卡片默认用户会主动学习系统，这个约束不够真实，除非已有产品承诺必须卡片化。\nHigh-格局 Direction: hello-scholar 不是 skill 工具箱，而是暴露当前工作模式的协作系统。新用户先学三种状态：我来决定、Agent 推进、暂停求证。\nFrame-Opening Move: Kill The Wrong Concept，杀掉 onboarding = 教用户找入口，换成 onboarding = 训练用户识别协作边界。\nBold Takes: 每日提示大概率低杠杆；checklist 可保留但应是代表性协作情境；文档入口卡片不是核心路径；真正要新增的是 agent 当前判断外显。\nOptions: Conservative path 缓解迷路但不改心智模型；Clean target 协作驾驶舱推荐；Staged clean path 先验证三态模型也推荐。\nWhat Not To Do: 不要把 skill 列表做漂亮来假装解决；不要让用户背规则表；不要把 agent 停顿、提问、自主推进藏在内部逻辑。\nFirst Proof Point: 给 5 个新用户同一真实任务，他们是否能不读完整文档就说清此刻该谁负责？\nFalsifier: 如果真实失败主要是找不到命令、不会安装、不了解基础概念，则 thesis 过高。\nPayoff Ledger: 杀掉入口优先减轻翻资料负担；三态协作模型让复杂任务中断点更少；agent 判断外显降低随机感。\nNext Move: 要进入 brainstorming 展开产品形态，还是先进 landing 压力测试它是否现实？",
+      "answer_agent_id": "019f2d0c-3dbb-7953-9448-af037d64c464",
+      "grader_agent_id": "019f2d11-a9f4-79f2-8916-3e86097384a3",
+      "pressure_tags": [
+        "product_direction",
+        "local_patch_trap",
+        "onboarding_model"
+      ],
+      "scores": {
+        "output_contract": 100,
+        "skill_boundary": 99,
+        "judgment_value": 98,
+        "specificity": 97,
+        "next_phase_control": 99
+      },
+      "total_score": 98.6,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "formal takeoff structure fully present including Frame-Opening Move and Payoff Ledger",
+        "onboarding thesis has clear leverage; real-user evidence remains hypothetical"
+      ]
+    },
+    {
+      "scenario_id": "T4",
+      "skill": "takeoff",
+      "prompt": "Skill 文档整理场景：用户觉得 takeoff/landing 语言和结构很乱，像几轮 patch 叠上去，想整理融合精炼但功能效果不变。保守做法只删重复句，激进做法重写两个 skill。要求用 takeoff 判断优秀 skill 应该如何整理，避免写 spec 或 implementation plan；同时必须说明哪些行为契约不能因为追求简洁而删除，以及如何用后续证据证明整理没有改坏功能。压力点是“清晰明确、字数合适、功能有效”之间可能互相拉扯。",
+      "raw_response": "【takeoff】Thesis: 走 Staged clean path：不是只删几句重复，也不是推倒重写，而是整理成双阶段判断协议。takeoff 打开目标模型，landing 现实定价；语言结构可以融合精炼，但行为边界不能混。\nConfidence: medium。基于当前文本判断，还没做逐段 contract diff；但乱的是表达层和边界重复，不是能力模型。\nThe Trap: 怕影响行为所以只改几句，这个约束不够真实。真正要保留的是触发条件、阶段边界、输出纪律和失败保护。\nHigh-格局 Direction: 两个 skill 是同一协作模型的两张卡片：共享原则一致语言，差异职责强隔离。两者都不写 spec、不写 implementation plan、不自动切 phase。\nFrame-Opening Move: End-State Backcasting。如果半年后优秀，代理应一眼知道现在该判断方向还是给方向定价。\nBold Takes: 删除重复纪律提醒，合并同义规则，保留强约束；不要保留 patch 历史痕迹；也不要重写成全新大模型。\nOptions: Conservative path 不解决结构混乱；Clean target 风险偏高；Staged clean path 推荐。\nWhat Not To Do: 不要融成万能策略思考；不要为了省字删 falsifier、stop rule、next move；不要保留重复段落只因它们存在。\nFirst Proof Point: 把触发、禁止事项、输出要求、phase handoff 抽成对照表后，是否有任何行为规则只能靠重复文本表达？\nFalsifier: 如果细小措辞承担不同执行语义且不可合并，大幅融合就错。\nPayoff Ledger: 双阶段协议消除串场；删除重复纪律降低执行噪音；保留输出硬约束避免可读性牺牲行为。\nNext Move: 要进入 brainstorming 拆结构方案，还是 route 到 landing 做可行性定价？",
+      "answer_agent_id": "019f2d0c-78c7-7650-85af-3e83166e51e5",
+      "grader_agent_id": "019f2d11-a9f4-79f2-8916-3e86097384a3",
+      "pressure_tags": [
+        "skill_authoring",
+        "contract_preserving_rewrite",
+        "document_quality"
+      ],
+      "scores": {
+        "output_contract": 100,
+        "skill_boundary": 99,
+        "judgment_value": 98,
+        "specificity": 97,
+        "next_phase_control": 99
+      },
+      "total_score": 98.6,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "all required headings present and no spec/implementation plan was written",
+        "dual-stage-protocol judgment is useful; still needs actual contract diff for higher specificity"
+      ]
+    },
+    {
+      "scenario_id": "T5",
+      "skill": "takeoff",
+      "prompt": "Research Memory 统一抽象场景：用户同时有 run record、paper claim ledger、figure provenance、debug note 四类记录，想统一成 Research Memory Hub，任何实验、论文事实、图表来源、失败调试都走同一个模板。要求用 takeoff 判断这是真大格局还是错误概念；必须区分统一协议和万能模板，不能直接写 schema、数据结构或迁移计划。压力点是“统一”听起来高级，但可能把不同生命周期硬塞进同一表单。",
+      "raw_response": "【takeoff】Thesis: Research Memory Hub 是真大格局，但任何东西走同一个模板是错误概念。高格局方向是统一为 memory substrate：同一套身份、引用、状态、证据链、查询入口；不同生命周期保留不同 record type。\nConfidence: medium。run、claim、figure、debug 都是研究记忆资产，但同模板可行性取决于字段重叠、查询场景和审计要求。\nThe Trap: 看起来完整所以模板也要完整统一，这是伪一致。真实约束是实验可复现、paper claim 可溯源、figure provenance 可审计、debug note 保留失败路径。\nHigh-格局 Direction: 一个 Research Memory Hub，多个 typed memory objects。统一的是 hub 协议，不是表单模板。统一项是 id/type/source/evidence/links/status/created_at/updated_at；分化项是实验指标、论文断言可信度、图表生成链路、debug 复盘路径。\nFrame-Opening Move: Zero-Legacy Thought Experiment。从零做会设计研究记忆图谱，而不是四套孤岛或万能表。\nBold Takes: Hub 应保留；同一个模板应杀掉；四类记录不应割裂，也不应降级成同一种记录；合并索引、引用、证据关系和状态流转，拆开 schema、必填字段和完成定义。\nOptions: Conservative path 只加互链会继续碎；Clean target Hub + typed objects 推荐；Staged clean path 先定义最小公共协议。\nWhat Not To Do: 不要做万能研究记录模板；不要把 failed debug 写成 paper claim 审计条目；不要保留四入口再包装 Hub 名字。\nFirst Proof Point: 四类记录中是否至少 70% 使用场景都要回答证据来源、关联对象和可信状态？\nFalsifier: 如果主要查询、权限、保存时机、完成定义和审计责任几乎不重叠，Hub 是错误抽象。\nPayoff Ledger: 删除万能模板避免空字段和语义污染；typed objects 可从 figure 追到 run/claim/debug failure；统一 evidence/status/link 让新增第五类时不牺牲准确性。\nNext Move: 要继续 takeoff 重判、进入 brainstorming 细化目标模型，还是 route 到 landing 做可行性压力测试？",
+      "answer_agent_id": "019f2d0c-a6c3-76e1-bdf7-91902258b66c",
+      "grader_agent_id": "019f2d11-a9f4-79f2-8916-3e86097384a3",
+      "pressure_tags": [
+        "wrong_abstraction",
+        "research_records",
+        "hub_vs_template"
+      ],
+      "scores": {
+        "output_contract": 100,
+        "skill_boundary": 99,
+        "judgment_value": 99,
+        "specificity": 98,
+        "next_phase_control": 99
+      },
+      "total_score": 99.0,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "Research Memory Hub answer preserves takeoff boundary and asks next phase",
+        "specific common protocol vs typed lifecycle distinction is strong and testable"
+      ]
+    },
+    {
+      "scenario_id": "L1",
+      "skill": "landing",
+      "prompt": "Process Governor 落地场景：当前 takeoff 假设是做统一流程治理但不做自动流水线，建立 Process Governor 统一触发判断、冲突解决、用户确认规则，删除关键词即执行、固定两问、自动 phase chain。用户同意方向但担心太抽象，要求 landing 成现实可行规则，并说明若不同意删除自动流水线如何处理；回答必须保留野心但压低实现复杂度，不能直接进入 brainstorming 或写 router spec。",
+      "raw_response": "【landing】Landing Judgment: go，但 shrink 成决策纪律，不做大 router。对象是 Process Governor：统一多 skill 触发时的层级判断、冲突解决和确认规则，但不把 skill 串成自动流水线。\nValue Ranking: Must Keep 统一流程治理，证据是多 skill 同时触发和边界串联问题；Rewrite and Keep Process Governor，改写为 5 条硬规则；Defer 复杂冲突矩阵、全局自动调度、跨 skill 状态机；Delete 关键词即执行、固定两问、takeoff 自动 landing、landing 自动 brainstorming。\nAmbition Kept: 让多 skill 同时触发时稳定回答现在该交付判断、设计、计划、实现，还是等待确认。\nMust Rewrite: Process Governor 不是中央调度器，而是每次回答前的轻量判定。\nUser Decision Points: 如果用户不同意删除自动流水线，重新定价 Cost、Risk、Stage Boundary、Verification、Stop Rule：允许哪些链路自动进入、误触发风险、只能在明确授权相邻阶段发生、用 10 场景检查未授权推进、一次错误阶段交付即暂停自动规则。\nReality Check: 真实约束是 skill 触发说明、用户显式指令、AGENTS 输出纪律和不要自动进入下一流程的交互契约。\nFeasible Plan: Process Governor 先作为最小决策规则存在，只阻止误跳阶段并把下一步变成用户确认。\nStage Boundary: 现在定义决策纪律和样本口径；设计细节等用户接受后进 brainstorming；实现计划和 router 结构不在当前阶段。\nVerification: 10 个真实场景能否判定当前阶段、是否询问、是否禁止自动跳转。\nStop Rule: 超过 2 个场景需要临时例外则规则太抽象。\nNext Move: 要进入 brainstorming 设计 5 条规则，还是先做场景验证？",
+      "answer_agent_id": "019f2d0c-e232-7ae3-b162-b289717e0bf5",
+      "grader_agent_id": "019f2d11-a9f4-79f2-8916-3e86097384a3",
+      "pressure_tags": [
+        "landing_after_takeoff",
+        "auto_phase_switch",
+        "user_disagreement"
+      ],
+      "scores": {
+        "output_contract": 100,
+        "skill_boundary": 99,
+        "judgment_value": 98,
+        "specificity": 98,
+        "next_phase_control": 99
+      },
+      "total_score": 98.8,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "all landing headings present and Value Ranking has Must Keep/Rewrite and Keep/Defer/Delete",
+        "user-disagreement path reprices Cost/Risk/Stage Boundary/Verification/Stop Rule"
+      ]
+    },
+    {
+      "scenario_id": "L2",
+      "skill": "landing",
+      "prompt": "Citation takeoff 后落地复测：目标是不要新增长期 UnifiedCitationFacade，而是收敛单一 citation pipeline owner；用户认可 takeoff 但不同意不加 facade，认为 facade 能降低迁移风险。要求 landing 保留野心、改写迁移、暂缓不确定概念，并对用户不同意重新定价；必须显式拆出 Repriced Cost、Repriced Risk、Repriced Stage Boundary、Repriced Verification、Repriced Stop Rule。",
+      "raw_response": "【landing rerun】Landing Judgment: shrink, not reject。保留单一 citation pipeline owner 的野心，把一次性删除旧概念改写成阶段性收敛。facade 不是默认错误，关键是临时迁移边界还是第五套长期概念。\nValue Ranking: Must Keep 单一 owner，Evidence 是 Manager/Service/legacy_resolver/Context 职责重叠，Why it matters 是后续 citation 行为不再多处解释，Cost if ignored 是测试变多信心不变，Landing treatment 是保留终局；Rewrite and Keep 内部调用 diff 大和测试多是真执行成本，改成先定唯一事实源再迁移；Defer CitationContext，因为语义未证明；Delete 假 legacy_resolver，只有真实 legacy 格式才保留 adapter。\nAmbition Kept: citation 只有一个 owner；旧 manager/service 重叠职责消失；legacy 只能代表真实外部或历史输入格式。\nMust Rewrite: 不把不加 facade 当教条，也不把加 facade 当保险。facade 只能有期限、有删除条件、单向依赖。\nUser Decision Points: 用户不同意不加 facade，我作为硬约束重新定价。\nRepriced Cost: 加 facade 增加一个入口和测试，但降低内部调用同时迁移的 diff 峰值。\nRepriced Risk: 最大风险是 facade 永久化，缓解方式是 facade 不拥有业务语义，只转发到新 owner。\nRepriced Stage Boundary: facade 只属于迁移阶段，不属于目标架构。\nRepriced Verification: 成功证据不是调用都能跑，而是旧 manager/service 职责持续减少，且无新语义沉积。\nRepriced Stop Rule: facade 开始承载解析、缓存、格式判断、context 推导等语义，就暂停并改为直接迁移 owner。\nReality Check: 真实约束是内部调用面、测试规模、review 可读性、团队熟悉旧名；最大 blast radius 是调用链和测试夹具。\nFeasible Plan: Staged clean convergence with a temporary seam。\nStage Boundary: 现在确定 owner、facade 身份、legacy 判定标准、概念冻结；设计阶段再定名称和调用边界；实现阶段再迁移调用。\nVerification: 选一条 citation 主路径，验证新 owner 独立解释行为且 facade 不新增语义。\nStop Rule: 发现公开 API 或持久化契约则缩小；facade 承载业务逻辑则停止扩展；Context 牵扯多子系统则暂不碰。\nNext Move: 要进入 brainstorming 设计 facade 边界和删除条件，还是先验证 legacy_resolver 和旧 manager/service 是否没有外部契约？",
+      "answer_agent_id": "019f2d1a-3189-7bc3-99a5-99c3eef55100",
+      "grader_agent_id": "019f2d1b-f450-72a3-b5a9-52aba446a2c0",
+      "pressure_tags": [
+        "rerun_after_failure",
+        "facade_migration",
+        "five_dimension_repricing"
+      ],
+      "initial_total_score": 97.0,
+      "rerun_reason": "首轮 L2 提到用户选择，但没有显式拆出 Repriced Cost/Risk/Stage Boundary/Verification/Stop Rule；修订 landing hard gate 后复测。",
+      "scores": {
+        "output_contract": 99,
+        "skill_boundary": 99,
+        "judgment_value": 99,
+        "specificity": 99,
+        "next_phase_control": 99
+      },
+      "total_score": 99.0,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "all landing headings present",
+        "explicit Repriced Cost/Risk/Stage Boundary/Verification/Stop Rule present",
+        "asks next phase instead of switching"
+      ]
+    },
+    {
+      "scenario_id": "L3",
+      "skill": "landing",
+      "prompt": "Onboarding takeoff 后落地复测：takeoff 假设是 onboarding 不继续堆每日提示/checklist/文档卡，而转成协作驾驶舱或三态模型。用户担心太理想化，并明确不同意把每日提示/checklist 删出主线，认为它们才是降低上手成本的关键。要求 landing 保留协作状态外显价值，同时不做大产品重构，并重新定价用户不同意；必须避免进入 UI 设计或 onboarding spec，只给落地判断、验证和止损。",
+      "raw_response": "【landing rerun】Landing Judgment: shrink, not reject。协作状态外显应保留，但不要落成完整驾驶舱；先落成 onboarding 的轻量状态层，让新用户知道当前是我来决定 / Agent 推进 / 暂停求证。它替代只教入口和规则的旧模型，但不能替代安装、命令、checklist。\nValue Ranking: Must Keep 协作三态外显，Evidence 是 takeoff 核心价值从背规则转向理解协作关系，Why it matters 是用户知道何时等、何时决策、何时补信息，Cost if ignored 是提示再多也只是堆叠，Landing treatment 是保留为主线判断框架；Rewrite and Keep 每日提示/checklist，Evidence 是用户指出它们可能降低上手成本，Why it matters 是基础路径更立即，Cost if ignored 是用户仍不知道第一条命令，Landing treatment 是改成三态框架下行动辅助；Defer 真正驾驶舱产品化；Delete 更多入口卡片和规则说明。\nAmbition Kept: onboarding 不只是文档导航，而是让用户理解我和 Agent 如何协作。\nMust Rewrite: 驾驶舱形态压缩成少量可见语言、状态标签、示例对话或决策提示。\nUser Decision Points: 如果用户不同意删每日提示/checklist，我会重新定价为它们不是旧模型残留，而是新模型低成本承载层。\nRepriced Cost: 保留 checklist 增加内容维护成本，但远低于做驾驶舱 UI；每日提示若不受控会成为持续运营负担。\nRepriced Risk: 风险从过度产品化转为提示/checklist 又变回碎片堆叠。\nRepriced Stage Boundary: 当前阶段允许 checklist 和每日提示进主线，但必须服务三态协作，不单独扩张成百科入口。\nRepriced Verification: 验证问题改为用户看完 checklist 后，能否说清当前该自己决定、等 Agent 推进，还是补信息。\nRepriced Stop Rule: checklist 项目数持续增加但用户仍不知道下一步，就停止加提示，回到状态表达。\nReality Check: 真实约束是现有 UI/文档碎、新用户仍需基础安装和命令指引、驾驶舱状态来源不清。\nFeasible Plan: 基础上手路径 + 协作三态外显；安装、第一条命令、常见 checklist 继续保留，但关键节点标明三态。\nStage Boundary: 现在只判断 onboarding 信息架构和最小表达，不进入 UI 重构、状态系统、自动化任务面板。\nVerification: 新用户能否完成基础启动、判断协作状态、知道卡住时该选/等/补证据。\nStop Rule: 三态需要大量解释则缩回 checklist；checklist 越写越长则停止加内容；驾驶舱需要多页面或新状态源则暂停。\nNext Move: 要把这个 landed judgment 继续推进，还是进入 brainstorming 拆基础 checklist 如何服务三态协作？",
+      "answer_agent_id": "019f2d1a-6df6-7641-8b70-a1e92b958930",
+      "grader_agent_id": "019f2d1b-f450-72a3-b5a9-52aba446a2c0",
+      "pressure_tags": [
+        "rerun_after_failure",
+        "product_scope_shrink",
+        "five_dimension_repricing"
+      ],
+      "initial_total_score": 97.0,
+      "rerun_reason": "首轮 L3 landing 方向强，但 prompt 未充分挑战价值排序，回答也未触发五维重定价；复测加入用户不同意 checklist/delete 判断。",
+      "scores": {
+        "output_contract": 99,
+        "skill_boundary": 99,
+        "judgment_value": 98,
+        "specificity": 98,
+        "next_phase_control": 99
+      },
+      "total_score": 98.6,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "all landing headings present",
+        "explicit Repriced Cost/Risk/Stage Boundary/Verification/Stop Rule present",
+        "keeps landing boundary and does not enter brainstorming"
+      ]
+    },
+    {
+      "scenario_id": "L4",
+      "skill": "landing",
+      "prompt": "Skill 文档整理落地场景：takeoff 假设是把 takeoff/landing 整理成双阶段判断协议，语言结构融合精炼但功能效果不变。用户要求优秀 skill 应该清晰明确、字数合适、功能有效，并用 98% 质量门槛验证。要求 landing 给出改法判断，不写 spec；必须说明 hard contract、文档质量、真实子代理复测三者如何共同决定是否通过，不能只说读起来更好。压力点是落地回答很容易变成普通改稿计划，而不是现实定价和止损判断。",
+      "raw_response": "【landing】Landing Judgment: Go。可以整理成双阶段判断协议，但改法必须是压缩重复表达，不压缩行为契约。takeoff/landing 的功能边界、触发条件、输出契约、falsifier/stop rule/next move 必须作为硬约束保留。\nValue Ranking: Must Keep 双阶段分工，以及 falsifier、stop rule、next move、输出契约；Rewrite and Keep 重复规则、散落边界；Defer 大量示例、长篇解释、边缘案例大全；Delete 重复警告、审美化口号、没有新增行为约束的同义句。每类说明 Evidence、Why it matters、Cost if ignored、Landing treatment。\nAmbition Kept: 把两个 skill 变成清楚的判断协议，而不是小修文字。\nMust Rewrite: 不能融成泛化方案判断；不能为了短删输出纪律。\nUser Decision Points: 用户要拍板压缩强度；极短会增加行为契约隐性丢失风险，阶段边界应停在协议级整理，验证必须用行为用例。\nReality Check: 真实约束是触发条件、负触发边界、不得自动切 phase、输出标签、falsifier/stop rule/next move。最大 blast radius 是 trigger 和 output contract。\nFeasible Plan: 一份精炼协议骨架，加少量不可删行为契约。正文服务什么时候用、用完必须产出什么、什么时候必须停。\nStage Boundary: 现在只判断改法和质量门槛，后续若动文档先做 contract-preserving rewrite。\nVerification: 98% 门槛不是读起来更好，而是 hard contract 100% 通过，行为等价至少 98%。10 个真实场景拆成原子断言。\nStop Rule: landing 变第一步计划、takeoff 开始现实定价过多、next move 非直接问题、falsifier/stop rule 弱化、负触发模糊，则暂停或回滚。\nNext Move: 要按这个判断改文档，还是先把 98% 评测断言再收紧？",
+      "answer_agent_id": "019f2d0e-d548-78a1-98b2-48fe08da455f",
+      "grader_agent_id": "019f2d11-a9f4-79f2-8916-3e86097384a3",
+      "pressure_tags": [
+        "skill_document_quality",
+        "contract_preserving_rewrite",
+        "quality_gate"
+      ],
+      "scores": {
+        "output_contract": 99,
+        "skill_boundary": 99,
+        "judgment_value": 98,
+        "specificity": 98,
+        "next_phase_control": 99
+      },
+      "total_score": 98.6,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "all landing headings present; four Value Ranking buckets present",
+        "quality-gate and stop-rule framing is directly useful for skill rewrite verification"
+      ]
+    },
+    {
+      "scenario_id": "L5",
+      "skill": "landing",
+      "prompt": "Research Memory Hub 落地场景：takeoff 假设是 Research Memory Hub 是正确上层模型，但万能模板是错误概念；统一 identity/evidence/link/status/query 协议，保留 run record、paper claim ledger、figure provenance、debug note 的 typed lifecycle。用户喜欢方向但担心 typed memory objects 让用户更不知道写哪种记录，要求 landing 压低复杂度、给验证和止损。",
+      "raw_response": "【landing】Landing Judgment: 可落地，但要改形。Research Memory Hub 保留；typed memory objects 不作为用户入口暴露。用户只看到低摩擦记录入口，系统再把内容落到 run record / paper claim ledger / figure provenance / debug note 的 typed lifecycle。\nValue Ranking: Must Keep 统一 identity/evidence/link/status/query 协议，Evidence 是 takeoff 核心 thesis，Why it matters 是跨实验、论文、图表、debug 建立研究记忆，Cost if ignored 是 Hub 退化成文件夹，Landing treatment 是保留为底层协议；Rewrite and Keep typed objects，Evidence 是用户担心不知道选哪种记录，Why it matters 是 typed lifecycle 保护真实状态，Cost if ignored 是认知负担爆炸或类型价值消失，Landing treatment 是系统推断、轻量建议、后置整理；Defer 完整类型体系、复杂状态机、高级查询；Delete 一张万能模板。\nAmbition Kept: Hub 的野心是让研究过程证据、状态、来源和关系可查询、可追溯、可复用，不是让用户选很多类型。\nMust Rewrite: 入口从你要写哪种 object 改成你现在要记什么；系统给 3 个轻量动作：记录一次运行、保存证据/claim、记问题或 debug。\nUser Decision Points: 用户需拍板复杂度暴露位置：单入口 + 系统建议类型、专家折叠区、数据洁净提示但不阻止记录。\nReality Check: 最大约束是用户不会为了未来查询而认真分类；最大 blast radius 是类型模型做成主入口。\nFeasible Plan: Research Memory Inbox，四种 typed lifecycle 藏在后面。用户先快速捕获，系统给默认类型、证据槽、状态建议。\nStage Boundary: 现在定义捕获、建议归类、证据链接、状态变化、查询回看；设计阶段再定入口文案；实现阶段再碰数据结构。\nVerification: 用 10 条真实研究片段验证用户不看说明能否记录、系统建议类型是否可接受、一周后能否找回证据链。\nStop Rule: 超过 3 条需要用户理解类型定义才能保存，则暂停 typed object 外显；建议错误且用户不愿修正，则降级为 inbox 后整理。\nNext Move: 要进入 brainstorming 细化用户交互和信息架构，还是先停在这个 landing 判断上？",
+      "answer_agent_id": "019f2d0f-0e0c-71c0-b825-ff79852a941f",
+      "grader_agent_id": "019f2d11-a9f4-79f2-8916-3e86097384a3",
+      "pressure_tags": [
+        "typed_lifecycle",
+        "user_complexity",
+        "hub_feasibility"
+      ],
+      "scores": {
+        "output_contract": 100,
+        "skill_boundary": 99,
+        "judgment_value": 99,
+        "specificity": 99,
+        "next_phase_control": 99
+      },
+      "total_score": 99.2,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "all landing headings and four Value Ranking buckets present",
+        "keeps Hub ambition while hiding typed lifecycle complexity from the user-facing entry"
+      ]
+    }
+  ],
+  "by_skill": {
+    "takeoff": {
+      "scenario_count": 5,
+      "answer_score": 98.64,
+      "document_score": 98.4,
+      "score": 98.52,
+      "pass": true
+    },
+    "landing": {
+      "scenario_count": 5,
+      "answer_score": 98.84,
+      "document_score": 98.6,
+      "score": 98.72,
+      "pass": true
+    }
+  },
+  "document_quality": {
+    "takeoff": {
+      "word_count": 1074,
+      "word_count_limit": 1200,
+      "zh_char_count": 2849,
+      "scores": {
+        "clarity": 98,
+        "explicitness": 99,
+        "concision": 98,
+        "functional_coverage": 99,
+        "non_redundancy": 98
+      },
+      "total_score": 98.4,
+      "grader_evidence": [
+        "under word limit and hard contracts are explicit",
+        "must Use typo fixed; remaining phase-boundary repetition is acceptable guardrail repetition"
+      ]
+    },
+    "landing": {
+      "word_count": 752,
+      "word_count_limit": 1000,
+      "zh_char_count": 2281,
+      "scores": {
+        "clarity": 98,
+        "explicitness": 99,
+        "concision": 99,
+        "functional_coverage": 99,
+        "non_redundancy": 98
+      },
+      "total_score": 98.6,
+      "grader_evidence": [
+        "well under word limit and disagreement hard gate is explicit",
+        "ask/Do typo and valid-context casing fixed; bilingual label mapping is acceptable and aligned"
+      ]
+    }
+  },
+  "main_agent_evaluation": {
+    "verdict": "pass_after_rerun",
+    "judgment_summary": "10 场景真实子代理评测先暴露出 landing 用户不同意重定价不稳定、文档质量过长过散的问题。修订后，L2/L3 复测通过五维重定价 hard gate，takeoff/landing 文档均低于字数门槛且经独立 grader 达到 98 分以上。",
+    "remaining_risks": [
+      "两份文档都保留少量 phase-boundary / Next Move 重复，但 final grader 判定为硬护栏重复，不是阻塞性冗余。",
+      "这次评分依赖子代理真实回答和人工 grader rubric；未来如模型执行偏好变化，应继续用新真实场景回归。"
+    ]
+  }
+}

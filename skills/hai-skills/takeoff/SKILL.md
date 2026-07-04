@@ -11,122 +11,64 @@ description: |
 
 # Takeoff
 
-For Chinese readers, see `SKILL.zh_CN.md`. The English `SKILL.md` is the execution source of truth.
+`SKILL.zh_CN.md` is the primary editing version. Keep this file behaviorally aligned because some execution environments load `SKILL.md`.
 
 ## Overview
 
-Open the design space during 方案讨论: recommend the right target model, not the smallest patch. The output is a 格局判断 — a sharp thesis plus a disciplined way to test it.
+Open the design space during 方案讨论: recommend the right target model, not the smallest patch. The output is a 格局判断: a sharp thesis plus disciplined proof questions.
 
-`takeoff` stays at the direction judgment layer. It may name the next phase, but it does not write design specs, does not write implementation plans, does not create experiment records, and does not perform code review. If the user accepts the direction, it can ask whether to enter `brainstorming` for design details; if the direction needs feasibility pressure, it can ask whether to route to `landing`. It only asks; it does not switch phases automatically.
+`takeoff` stays at the direction judgment layer. It does not write design specs, does not write implementation plans, does not create experiment records, and does not perform code review. It may name the next phase, but it only asks and does not switch phases automatically.
 
-## Core Principle
+If `brainstorming` also applies, deliver the `takeoff` judgment first before any clarifying-question workflow begins. Brainstorming starts only after the user accepts the direction or explicitly asks to refine it. Do not add a separate hypothesis handoff in the same dialogue: landing can read the current context. Compress the thesis only when context may be lost, the user asks for a handoff, or landing inputs are ambiguous.
 
-大胆假设，小心求证。
+Core principle: 大胆假设，小心求证. Treat the thesis as a high-leverage hypothesis, not an oracle. Refactor difficulty, compatibility fear, existing structure, and local details are constraints to price, not masters to obey.
 
-Takeoff (formerly `geju`) does not produce a guaranteed-correct answer. It produces a high-leverage, provocative hypothesis that opens the design space. Treat the thesis as a strong hypothesis to test, not as an oracle: first make the bold call, then define the careful verification path.
+## Frame-Opening Moves
 
-Refactor difficulty, compatibility fear, existing implementation shape, and local details are constraints to price, not masters to obey. Do not let them decide the direction too early.
+Use at least one move and name it in the output.
 
-## Ways To Open The Frame
+| Move | Use it to reveal |
+|---|---|
+| End-State Backcasting | what would be true if the system were excellent six months from now |
+| Zero-Legacy Thought Experiment | which compatibility constraints are real and which are inertia |
+| Kill The Wrong Concept | concepts, wrappers, names, or PRD sections that encode the wrong model |
+| Ten-Times Question | the axis that breaks under more usage, complexity, teams, or product surface |
+| Constraint Inversion | what we would build if the inherited constraint vanished |
+| Non-Negotiable Principles | 2-4 design rules that must not bend before implementation details appear |
+| Tasteful Deletion | what should stop existing instead of being renamed, wrapped, or deferred |
+| Hypothesis First, Verification Second | the bold bet plus what would prove, weaken, or falsify it |
 
-The eight moves below are the skill's catalog. Use at least one whenever the discussion is trapped in local optimization.
-
-### 1. End-State Backcasting
-
-Ask: "If this system were already excellent six months from now, what would be true?" Work backward from that target — not from today's package layout, legacy names, or current partial implementation.
-
-### 2. Zero-Legacy Thought Experiment
-
-Ask: "If we started today with no old callers, what would we build?" Compare the clean target with the legacy-preserving path. This exposes which compatibility work is real and which is inertia.
-
-### 3. Kill The Wrong Concept
-
-Sometimes the right move is not to rename, split, or patch a concept — it is to delete the concept because it encodes the wrong model. Look for concepts that exist only because of history:
-
-- Duplicate names for one lifecycle.
-- Transitional wrappers with no real contract.
-- "Manager", "service", "context", or "config" objects that hide responsibility.
-- PRD sections or plan phases that exist only because the current document already has them.
-
-### 4. Ten-Times Question
-
-Ask: "If this had to support 10x more usage, complexity, teams, or product surface, what would obviously break?" Use this not to over-engineer, but to reveal the current design's weak axis.
-
-### 5. Constraint Inversion
-
-Instead of "how do we work around this constraint?", ask "what if this constraint were removed?" Then decide whether the constraint deserves to survive.
-
-### 6. Non-Negotiable Principles
-
-Before discussing implementation, name 2-4 principles the design must not violate, e.g.:
-
-- The document is the source of truth.
-- One concept has one lifecycle owner.
-- Internal legacy names do not get compatibility shims.
-- User-facing contracts need migration; internal callers get updated directly.
-
-### 7. Tasteful Deletion
-
-Deletion is a design act. If a feature, section, abstraction, config field, or compatibility path does not serve the target model, say so — do not hide deletion behind "maybe simplify later."
-
-### 8. Hypothesis First, Verification Second
-
-Say the bold hypothesis before overfitting to caveats. Then make it testable: What evidence would confirm this direction? What would disprove it? What is the cheapest proof point? What should we inspect before committing? What risk would make this take irresponsible?
-
-## What To Fight
-
-These are the failure modes that keep an answer small. Each gets countered by the moves above and by the workflow — do not flatten them into a balanced non-answer.
-
-| Trap | What it looks like | Counter-move |
-|------|--------------------|--------------|
-| Compatibility worship | Keeps old behavior, names, paths, aliases, shims, dual flows because breaking feels risky | Demand the real contract; absent a named user/API/data/deployment/compliance/product promise, prefer the cleaner target and name what to delete. Treat compatibility code as debt that must justify itself. |
-| Local detail trap | Drills into one field/function/paragraph/migration path before seeing the whole system | Step back to the product/architecture goal; fix the system boundary, owner, lifecycle, and target model first; refuse to let one awkward edge case define the design. |
-| Refactor fear | Avoids a better direction because the diff looks big or migration feels inconvenient | Separate "right target" from "how to get there"; recommend the clean target first; describe staged migration only if useful; never downgrade the design to shrink the first patch. |
-| Mild answer bias | Polite, balanced, low-stakes answers that dodge the real decision | State the sharp thesis; name what should be killed/merged/split/reframed; add a bold take if it clarifies; mark uncertainty honestly without hiding behind it. |
+Fight these traps: compatibility worship, local-detail fixation, refactor fear, and mild balanced answers that avoid the real decision. Real constraints are public APIs, persisted data, documented integrations, user promises, deployment constraints, compliance, or explicit user instruction. Internal callers, stale names, old package layout, partial implementation, and "this will be a big diff" are not enough.
 
 ## Workflow
 
-1. **Reframe at the highest useful level.** What is the real decision? What is the system trying to become? What would be obvious if we were not afraid of the current implementation, or if today's docs/code/package layout did not exist?
-
-2. **Name the inherited constraint.** Compatibility, migration difficulty, existing naming, local implementation shape, organizational habit, vague product goal, local document structure, or fear of deleting existing work.
-
-3. **Decide whether the constraint is real.** This is the operational heart of the skill — apply it in exactly this spot.
-   - **Real**: public API, persisted data, documented integration, user promise, deployment constraint, compliance, or explicit user instruction.
-   - **Not enough**: internal callers, stale naming, old package layout, existing partial implementation, "this will be a big diff."
-
-4. **Offer the high-格局 thesis.** Say the clean direction plainly. Explain what to delete, preserve, merge, split, or rebuild. Include the tradeoff instead of softening the recommendation. Include the kill list (what should stop existing). Label the thesis as a hypothesis when evidence is incomplete.
-
-5. **Apply at least one move from Ways To Open The Frame.**
-
-6. **Give 2-3 options only if they materially differ**, using the canonical labels: Conservative path / Clean target / Staged clean path. Recommend one.
-
-7. **Bring it back to execution.** Identify the first irreversible decision, the first proof point, what would falsify the thesis, and what not to spend time on. First Proof Point is an evidence question, not a recommended execution slice. Close with a choice: ask whether to enter `brainstorming` for design details, route to `landing` for feasibility pressure, or keep rejudging the thesis. Do not switch phases automatically, do not write a spec from `takeoff`, and do not preselect the landed plan.
+1. **Read local facts first.** Read the system you are judging; do not skim and invent.
+2. **Reframe at the highest useful level.** Name the real decision and the target model that would be obvious without current implementation fear.
+3. **Name and price inherited constraints.** Decide which are real contracts and which are anxiety or inertia.
+4. **State the high-格局 thesis.** Say the clean direction plainly, including what to delete, preserve, merge, split, rename, or rebuild. Include a kill list and mark uncertainty honestly.
+5. **Apply a Frame-Opening Move.** Make the move explicit and say what it revealed.
+6. **Offer options only when they differ.** Use Conservative path / Clean target / Staged clean path, with a verdict per row and one recommendation. Do not write ordered actions like "first A, then B, finally C"; if Options becomes a step sequence, it has drifted into landing or planning.
+7. **Bring it back to verification.** End with verification questions, not an execution slice: what would prove or weaken the thesis, what would falsify it, and what not to spend time on before evidence changes the judgment. First Proof Point is an evidence question, not a recommended execution slice, task breakdown, first PR, milestone, or file list. Landing owns feasibility repricing; `takeoff` should ask whether to route to `landing`; do not preselect the landed plan.
 
 ## Output
 
-Produce a 格局判断. For substantial answers, use these sections; for short dialogue, keep the same judgment content without turning the response into a document:
+Produce a 格局判断. Formal answers must use the exact headings below. Use the exact headings listed here. Short dialogue may omit headings, but not the judgment content.
 
-- **Thesis** — sharp, high-leverage, in 1-3 sentences; not presented as guaranteed truth.
-- **Confidence** — level (high / medium / low) plus why not certain.
+- **Thesis** — sharp, high-leverage, 1-3 sentences; not presented as guaranteed truth.
+- **Confidence** — level plus why not certain. Confidence level must be exactly high, medium, or low; do not invent hybrid levels like medium-high.
 - **The Trap** — the inherited constraint, whether it is real, and why.
 - **High-格局 Direction** — the clean target model.
-- **Frame-Opening Move** — which move you used and what it reveals.
-- **Bold Takes** — defensible bold claims; what to delete / merge / split / rename; what not to preserve.
-- **Options** — the Conservative path / Clean target / Staged clean path table with a verdict per row.
-- **What Not To Do** — local optimizations, shims, or detail traps to avoid.
+- **Frame-Opening Move** — which move you used and what it reveals. Frame-Opening Move must be explicit in formal output.
+- **Bold Takes** — defensible bold claims; what to delete / merge / split / rename; what not to preserve merely because it exists.
+- **Options** — Conservative path / Clean target / Staged clean path table with a verdict per row; do not write an ordered execution path.
+- **What Not To Do** — local optimizations, shims, and detail traps to avoid.
 - **First Proof Point** — the smallest evidence question that would prove or weaken the direction; not a recommended execution slice.
 - **Falsifier** — what evidence would prove the thesis wrong.
-- **Payoff Ledger (收益账单)** — the closing table that justifies the direction to the audience: each major move (drawn from the Bold Takes / kill list) with the price paid now, the concrete pain it removes or capability it unlocks, and when that payoff becomes visible. Generic benefits ("cleaner", "more maintainable") are banned — every row must name a specific pain or unlock, or the row gets cut.
+- **Payoff Ledger (收益账单)** — each major move with the price paid now, the concrete pain removed or capability unlocked, and when that payoff becomes visible. Generic benefits like "cleaner" or "more maintainable" are banned.
+- **Next Move** — ask whether to enter `brainstorming` for design details, route to `landing` for feasibility pressure, or keep rejudging the thesis. Next Move must ask a direct question, not declare that the next phase has started. If the response must use the hello-scholar wrapper, put this question in the single `🔄 Next Step` / `🔄 下一步` wrapper field; do not add a separate `Next Move` / `下一步` body heading or place substantive next-phase action suggestions under other headings.
 
-Output discipline that the sections do not already enforce:
+Short dialogue means no headings, not partial judgment. It still has to cover Confidence, The Trap, Frame-Opening Move, What Not To Do, First Proof Point, Falsifier, Payoff Ledger, and Next Move. If those elements are missing, the takeoff failed.
 
-- Lead with the thesis, not a long caveat. Bold claims are allowed; pretending they are certain is not.
-- Separate target design from migration path.
-- Do not preserve backward compatibility by default — treat every shim as debt that must name a real contract to survive.
-- Do not get stuck in code-level details unless the detail changes the direction.
-- If the answer feels too safe, add one stronger thesis and name how to test it.
+Formal answer self-check: verify every required heading is present and named exactly. Do not rename required headings into phase-specific headings such as "Landing follow-up", "Design transition", or "Router rule"; if multiple phase names appear in the prompt, keep the takeoff headings and put phase discussion inside them. The only exception is when the hello-scholar wrapper already provides a `🔄 Next Step` / `🔄 下一步` field: merge the Next Move question there so the answer has one next-step exit; the body should describe the current judgment, not preview "downstream consumption" or "if we continue" actions.
 
-## What this skill is NOT
-
-- Not reckless implementation. Bold direction still needs evidence and validation.
-- Not a correctness guarantee. The value is inspiration plus a disciplined way to test the hypothesis.
+Output discipline: lead with the thesis, separate target design from migration path, do not preserve backward compatibility by default, avoid code-level detail unless it changes the direction, and strengthen answers that feel too safe by naming how to test the stronger thesis.

@@ -6,60 +6,41 @@ description: |
 
 # Landing
 
-For Chinese readers, see `SKILL.zh_CN.md`. The English `SKILL.md` is the execution source of truth.
+`SKILL.zh_CN.md` is the primary editing version. Keep this file behaviorally aligned because some execution environments load `SKILL.md`.
 
 ## Overview
 
-Automatically use this skill only after `takeoff` (formerly `geju`) has produced a direction that needs feasibility pressure. It is not the default follow-up to every `takeoff`; accepted directions can go to `brainstorming` for design. User-explicit `landing` requests are valid triggers, but still need a prior direction or the missing landing inputs. `landing` should rewrite the bold direction into a feasible plan.
+Automatically use this skill only after `takeoff` has produced a prior direction that needs feasibility pressure. User-explicit `landing` requests are valid triggers, but still need a prior direction. `landing` should rewrite the bold direction into a feasible plan: keep the ambition, rewrite the parts that cannot survive reality, and produce a feasible revised direction. The output is not just the first move and not the whole execution plan.
 
-For `landing`, valid input must name the bold thesis, the old model it replaces, and the main reality question that could break it. If those are missing, do not run the landing template; answer the ordinary question or ask for the missing direction first.
+If `brainstorming` also applies, deliver the `landing` judgment first before any brainstorming-style clarification begins. Brainstorming starts only after the user accepts the landed direction or explicitly asks to refine it. When design work is next, ask the user whether to enter `brainstorming`. Do not switch phases automatically.
 
-Core principle: 改方案，不是把方案砍成第一步。`landing` should keep the ambition when it is valuable, rewrite the parts that cannot survive reality, and produce a feasible revised direction. The output is not just the first move and not the whole execution plan.
+`landing` receives the takeoff hypothesis from context. A valid context must make the bold thesis, the old model it replaces, and the main reality question recoverable from the current context. If not, do not run the landing template; ask for the missing direction or answer the ordinary question.
 
-If there is no prior direction and no explicit user request for `landing`, do not infer this skill from generic words like "first", "validate", "risk", "MVP", "architecture", or "stop rule".
+Do not infer this skill from generic words like "first", "validate", "risk", "MVP", "architecture", or "stop rule" when there is no prior direction and no explicit landing request.
 
 ## Workflow
 
-1. Restate the bold direction in one sentence. Do not flatten the ambition. Name whether it came from prior `takeoff`/`geju` output or the user's explicit `landing` request. If there is no prior direction, or if the bold thesis / old model / main reality question cannot be stated, stop using this template and ask for the missing inputs or answer the ordinary question.
-
-2. Value-rank the takeoff output before rewriting it. The job is not to make the thesis smaller by default, and not to split it into binary valuable/useless buckets. Sort the claims, ideas, or mechanisms into four buckets:
-   - **Must Keep** — core value that makes the takeoff thesis worth pursuing; losing it would collapse the ambition.
-   - **Rewrite and Keep** — valuable intent, but unrealistic shape, cost, migration path, or contract fit.
-   - **Defer** — potentially valuable, but not needed for the landed direction yet, or not backed by proof or real contracts.
-   - **Delete** — low value, false value, aesthetic complexity, duplicate mechanism, or value smaller than cost/risk.
-
-   For each non-trivial item, include: Evidence: the concrete code, docs, tests, user promise, or observed behavior behind the ranking; Why it matters: the specific ambition or pain it protects; Cost if ignored: what breaks, bloats, or stays ambiguous; Landing treatment: the keep/rewrite/defer/delete rule. A one-line category table is not enough when the direction touches real files or contracts.
-
-   AI value ranking is an evidence-backed recommendation, not a final verdict. If the user disagrees, do not treat the AI ranking as authority and do not silently obey; treat the user's judgment as a new constraint, then re-price cost, risk, stage boundary, verification, and stop rule. Keep the re-pricing in five separate dimensions: Cost, Risk, Stage Boundary, Verification, Stop Rule.
-
-3. Run a reality check. Use the value ranking to name what stays, what must be rewritten, what waits, and what should be removed. Scan the five anti-patterns, then name the constraints they expose:
-   - **Vision without viable shape** — the goal is attractive, but the target model cannot yet be operated by real users, code, teams, or tests.
-   - **Fake migration plan** — the clean target assumes everything can change at once.
-   - **Unpriced risk** — "we can refactor" with no cost on data loss, blast radius, missing tests, or hidden callers.
-   - **Ambition collapsed into first step** — the answer gives a small first move but never rewrites the big idea into a workable plan.
-   - **No stop rule** — the plan can only continue; it cannot fail gracefully.
-
-   Then answer: what real contracts constrain the work, what carries the most blast radius, what assumptions are unproven, and what is aesthetic/speculative/premature? For counter-moves, read `references/anti-patterns.md`.
-
-4. Produce the feasible revised direction: target model after constraints are priced, parts kept, parts changed, parts deferred, and the downstream phase that can consume it.
-
-5. Define the stage boundary: what belongs now, what waits for design, what waits for implementation planning, and what should not be done.
-
-6. Make verification explicit. Success criteria must be observable; failure signals must be named; the check must be cheap enough to run before confidence decays. If behavior needs to be driven by tests, say that directly.
-
-7. Define the stop rule. What evidence would kill or pause the landed plan? What would force a smaller target? What can be rolled back or isolated? Which decision should not be made yet?
-
-8. Close with a clear next move: adopt the feasible plan, revise it, pause, or continue validating. Ask whether to proceed with that judgment; if the next step needs design work, ask the user whether to enter `brainstorming`. Next Move must ask a direct question to the user, not merely state the recommended next phase. Do not switch phases automatically.
+1. **Restate the direction.** Name the bold thesis and source context. If the bold thesis / old model / main reality question cannot be recovered, stop.
+2. **Value-rank before rewriting.** Use four buckets: **Must Keep**, **Rewrite and Keep**, **Defer**, **Delete**. For each important item include Evidence:, Why it matters:, Cost if ignored:, and Landing treatment:. A one-line category table is not enough when the direction touches real files or contracts.
+3. **Handle disagreement as a hard gate.** AI value ranking is an evidence-backed recommendation, not a final verdict. If the user disagrees, treat the user's judgment as a new constraint, then re-price cost, risk, stage boundary, verification, and stop rule in five separate dimensions: Cost, Risk, Stage Boundary, Verification, Stop Rule.
+4. **Reality-check the thesis.** Name real contracts, largest blast radius, unproven assumptions, fake migration plans, unpriced risks, aesthetic complexity, and places where ambition collapsed into a first step.
+5. **Produce the feasible revised direction.** State what stays, what changes, what waits, and what is removed. Feasible Plan is the landed shape and boundary, not a rewrite procedure, implementation sequence, or "first A, then B" operation list; any next-phase action belongs only in `🔄 Next Step` / `🔄 下一步`.
+6. **Set Stage Boundary, Verification, and Stop Rule.** Say what belongs now, what waits for design or implementation planning, what success/failure signal is cheap to observe, and what evidence would pause or shrink the plan.
+7. **Close with Next Move.** Ask whether to proceed with that judgment, revise, pause, validate further, or enter `brainstorming` for design. Next Move must ask a direct question. If the response must use the hello-scholar wrapper, put this question in the single `🔄 Next Step` / `🔄 下一步` wrapper field; do not add a separate `Next Move` / `下一步` body heading or place substantive next-phase action suggestions under Stage Boundary, Feasible Plan, or other body headings.
 
 ## Output
 
-Produce a concise landing judgment. For substantial answers, use this order; for short dialogue, preserve the same decision content without turning the response into a document: Landing Judgment / Value Ranking / Ambition Kept / Must Rewrite / User Decision Points / Reality Check / Feasible Plan / Stage Boundary / Verification / Stop Rule / Next Move.
+Use these exact labels for formal answers: Landing Judgment / Value Ranking / Ambition Kept / Must Rewrite / User Decision Points / Reality Check / Feasible Plan / Stage Boundary / Verification / Stop Rule / Next Move. The only exception is when the hello-scholar wrapper already provides a `🔄 Next Step` / `🔄 下一步` field: merge the Next Move question there so the answer has one next-step exit; the body should state what the current landing judgment includes and excludes, not preview the next phase's action.
 
-Hold these constraints:
+Short dialogue means no headings, not partial judgment. It still has to cover Value Ranking, Ambition Kept, Must Rewrite, User Decision Points, Reality Check, Feasible Plan, Stage Boundary, Verification, Stop Rule, and Next Move. If those elements are missing, the landing failed.
 
-- Lead with the verdict — go / shrink / pause / reject / validate first — not with the analysis.
-- Value Ranking must use the four buckets: Must Keep, Rewrite and Keep, Defer, Delete. Empty buckets can be named as none; do not collapse value into binary valuable/useless.
-- Value Ranking must justify important items with Evidence, Why it matters, Cost if ignored, and Landing treatment; do not give a shallow category table for a codebase-specific landing.
-- User Decision Points should name where the user's judgment could override the recommendation. If that happens, re-price cost, risk, stage boundary, verification, and stop rule as five separate dimensions: Cost, Risk, Stage Boundary, Verification, Stop Rule.
+Formal answer self-check:
+
+- Do not compress Value Ranking evidence fields; important items still need Evidence, Why it matters, Cost if ignored, and Landing treatment.
+- User Decision Points must name where the user's judgment could override the recommendation.
+- If the user disagrees: Do not merge Cost, Risk, Stage Boundary, Verification, and Stop Rule into one paragraph. Use explicit labels, preferably `Repriced Cost:`, `Repriced Risk:`, `Repriced Stage Boundary:`, `Repriced Verification:`, and `Repriced Stop Rule:`.
+- Value Ranking must use Must Keep, Rewrite and Keep, Defer, Delete. Empty buckets can be named as none; do not collapse value into binary valuable/useless.
+- Lead with the verdict: go / shrink / pause / reject / validate first.
 - Name real constraints separately from anxiety or inertia, and preserve the bold target when it is useful.
-- Next Move must ask the user whether to proceed, revise, pause, validate further, or enter `brainstorming` if design is needed.
+- Feasible Plan may describe the revised shape, boundaries, and tradeoffs; it must not become a document rewrite method, implementation order, file-step list, or migration sequence.
+- Next Move must ask the user whether to proceed, revise, pause, validate further, or enter `brainstorming` if design is needed. With the hello-scholar wrapper, this question belongs only in `🔄 Next Step` / `🔄 下一步`; no other heading or paragraph may serve as a second next-step exit.

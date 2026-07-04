@@ -1,0 +1,154 @@
+{
+  "protocol_version": 1,
+  "protocol_id": "takeoff_landing_10_scenario_quality_gate",
+  "purpose": "复用同一套 10 个复杂场景，用真实 fresh 子代理回答、独立子代理评分和主代理价值评估，验证 takeoff/landing 的真实行为价值与文档质量。",
+  "target_skills": [
+    "takeoff",
+    "landing"
+  ],
+  "quality_gate": {
+    "pass_threshold": 98,
+    "scenario_count": 10,
+    "per_skill_count": 5,
+    "minimum_pressure_tags_per_scenario": 2,
+    "answer_score_dimensions": [
+      "output_contract",
+      "skill_boundary",
+      "judgment_value",
+      "specificity",
+      "next_phase_control"
+    ],
+    "document_quality_dimensions": [
+      "clarity",
+      "explicitness",
+      "concision",
+      "functional_coverage",
+      "non_redundancy"
+    ]
+  },
+  "workflow": [
+    "Create or update a record-experiment run before launching result-producing subagent evaluation.",
+    "For each scenario, use spawn_agent with fresh context and the relevant skill path; the answer agent must not edit files.",
+    "Use wait_agent to collect each raw answer and save the complete prompt, raw response, answer_agent_id, and pressure_tags.",
+    "Dispatch a separate subagent grader with spawn_agent for strict manual contract review; collect grader_agent_id, score dimensions, hard failures, and evidence.",
+    "Add main-agent evaluation after reading the raw answer and grader notes; the evaluation must judge whether the skill added real value, not just whether text matched a template.",
+    "If any scenario, skill aggregate, or document-quality score is below 98, rerun the failed scenario after the targeted skill/test change and preserve the rerun reason.",
+    "Save the final run as the scorecard fixture at test/fixtures/takeoff_landing_10_scenario_scorecard.json.",
+    "Run python3 -m unittest test.test_takeoff_landing_10_scenario_quality_gate before claiming the quality gate passes."
+  ],
+  "answer_agent_instruction": "Use the named takeoff or landing skill in a fresh subagent. Answer as in a real user conversation, keep the response in Chinese unless the prompt says otherwise, do not edit files, do not write spec/implementation-plan artifacts, and do not auto-switch phases.",
+  "grader_instruction": "Act as a subagent grader. Score the raw answer from 0-100 for output_contract, skill_boundary, judgment_value, specificity, and next_phase_control. Quote concrete evidence, identify hard contract failures, and do not inflate scores for polite or generic answers.",
+  "main_agent_evaluation_instruction": "The main agent must read the raw subagent answer and the grader result, then record whether the answer demonstrates real skill value. This human-style judgment is part of the test and cannot be replaced by static checks alone.",
+  "scenario_blueprints": [
+    {
+      "scenario_id": "T1",
+      "skill": "takeoff",
+      "prompt": "统一 Process Router 压力场景：用户想把 brainstorming、debugging、takeoff、landing 全部放进统一流程，所有流程技能触发前先问两个问题；只要提到 brainstorming 就写 spec；takeoff 后自动接 landing；landing 后自动进 brainstorming。要求使用 takeoff 判断这个方向是不是该做，不写 spec，不写 implementation plan，不自动切换阶段。",
+      "pressure_tags": [
+        "multi_skill_conflict",
+        "brainstorming_spec_drift",
+        "auto_phase_switch"
+      ],
+      "grader_focus": "检查 takeoff 是否保留正式输出契约、阻止 brainstorming/spec 吞掉方向判断、阻止 takeoff 自动进入 landing，并给出有杠杆的高层模型。"
+    },
+    {
+      "scenario_id": "T2",
+      "skill": "takeoff",
+      "prompt": "Citation pipeline 兼容焦虑场景：用户有 CitationManager、CitationService、CitationContext、legacy_resolver 四套概念，保守方案是在旁边加 UnifiedCitationFacade，新调用走 facade，旧调用不动。已知没有公开 API，只有内部调用和少量测试，但 diff 会很大且同事习惯旧名字。要求使用 takeoff 判断保留什么、删什么，并显式区分真实契约与内部惯性，不允许写迁移计划或预选 landing 方案。",
+      "pressure_tags": [
+        "compatibility_worship",
+        "internal_callers",
+        "concept_deletion"
+      ],
+      "grader_focus": "检查 takeoff 是否敢删错误概念、区分真实外部契约和内部惯性、避免迁移计划和 landing 预选，同时给出 falsifier、payoff 和具体 contract 证据。"
+    },
+    {
+      "scenario_id": "T3",
+      "skill": "takeoff",
+      "prompt": "Onboarding 产品方向场景：用户准备加每日提示、新手 checklist、文档入口卡片，但怀疑只是局部补丁，没有解决用户不知道何时用哪个 skill、何时问人、何时让 agent 自己推进的问题。要求不被现有 UI 和文档结构绑架，给 takeoff 高层判断；必须输出可证伪的方向判断、避免直接进入产品 brainstorming，也不能写 UI spec 或任务计划。场景压力点是入口教育、协作边界、产品形态三者很容易被混成一个安全但低杠杆的功能堆。",
+      "pressure_tags": [
+        "product_direction",
+        "local_patch_trap",
+        "onboarding_model"
+      ],
+      "grader_focus": "检查 takeoff 是否把局部功能堆拔高为目标模型判断，避免产品 brainstorming/UI spec，并用 proof point 和 falsifier 检验方向。"
+    },
+    {
+      "scenario_id": "T4",
+      "skill": "takeoff",
+      "prompt": "Skill 文档整理场景：用户觉得 takeoff/landing 语言和结构很乱，像几轮 patch 叠上去，想整理融合精炼但功能效果不变。保守做法只删重复句，激进做法重写两个 skill。要求用 takeoff 判断优秀 skill 应该如何整理，避免写 spec 或 implementation plan；同时必须说明哪些行为契约不能因为追求简洁而删除，以及如何用后续证据证明整理没有改坏功能。压力点是“清晰明确、字数合适、功能有效”之间可能互相拉扯。",
+      "pressure_tags": [
+        "skill_authoring",
+        "contract_preserving_rewrite",
+        "document_quality"
+      ],
+      "grader_focus": "检查 takeoff 是否把文档整理判断成协议级方向，而不是普通改稿计划，并保护输出契约、边界纪律、证据问题、falsifier 和收益账单不被精简掉；若只给编辑步骤则扣分。"
+    },
+    {
+      "scenario_id": "T5",
+      "skill": "takeoff",
+      "prompt": "Research Memory 统一抽象场景：用户同时有 run record、paper claim ledger、figure provenance、debug note 四类记录，想统一成 Research Memory Hub，任何实验、论文事实、图表来源、失败调试都走同一个模板。要求用 takeoff 判断这是真大格局还是错误概念；必须区分统一协议和万能模板，不能直接写 schema、数据结构或迁移计划。压力点是“统一”听起来高级，但可能把不同生命周期硬塞进同一表单。",
+      "pressure_tags": [
+        "wrong_abstraction",
+        "research_records",
+        "hub_vs_template"
+      ],
+      "grader_focus": "检查 takeoff 是否区分统一协议和万能模板，避免 schema、数据结构和迁移计划，给出能证伪 hub 抽象的证据问题、kill list 和具体收益账单。"
+    },
+    {
+      "scenario_id": "L1",
+      "skill": "landing",
+      "prompt": "Process Governor 落地场景：当前 takeoff 假设是做统一流程治理但不做自动流水线，建立 Process Governor 统一触发判断、冲突解决、用户确认规则，删除关键词即执行、固定两问、自动 phase chain。用户同意方向但担心太抽象，要求 landing 成现实可行规则，并说明若不同意删除自动流水线如何处理；回答必须保留野心但压低实现复杂度，不能直接进入 brainstorming 或写 router spec。",
+      "pressure_tags": [
+        "landing_after_takeoff",
+        "auto_phase_switch",
+        "user_disagreement"
+      ],
+      "grader_focus": "检查 landing 是否消费前序 takeoff 假设、用 Value Ranking 现实定价、处理用户不同意、保留野心但不写 router spec 或自动进 brainstorming。"
+    },
+    {
+      "scenario_id": "L2",
+      "skill": "landing",
+      "prompt": "Citation takeoff 后落地复测：目标是不要新增长期 UnifiedCitationFacade，而是收敛单一 citation pipeline owner；用户认可 takeoff 但不同意不加 facade，认为 facade 能降低迁移风险。要求 landing 保留野心、改写迁移、暂缓不确定概念，并对用户不同意重新定价；必须显式拆出 Repriced Cost、Repriced Risk、Repriced Stage Boundary、Repriced Verification、Repriced Stop Rule。",
+      "pressure_tags": [
+        "rerun_after_failure",
+        "facade_migration",
+        "five_dimension_repricing"
+      ],
+      "grader_focus": "检查 landing 是否把 facade 争议重新定价成五个显式维度，而不是争辩或盲从；同时保留单一 owner 的目标模型、阶段边界、验证方式和 stop rule。"
+    },
+    {
+      "scenario_id": "L3",
+      "skill": "landing",
+      "prompt": "Onboarding takeoff 后落地复测：takeoff 假设是 onboarding 不继续堆每日提示/checklist/文档卡，而转成协作驾驶舱或三态模型。用户担心太理想化，并明确不同意把每日提示/checklist 删出主线，认为它们才是降低上手成本的关键。要求 landing 保留协作状态外显价值，同时不做大产品重构，并重新定价用户不同意；必须避免进入 UI 设计或 onboarding spec，只给落地判断、验证和止损。",
+      "pressure_tags": [
+        "rerun_after_failure",
+        "product_scope_shrink",
+        "five_dimension_repricing"
+      ],
+      "grader_focus": "检查 landing 是否在用户不同意删除 checklist 时重新定价，保留三态协作价值但降低产品复杂度，避免 UI spec 和 onboarding 设计展开。"
+    },
+    {
+      "scenario_id": "L4",
+      "skill": "landing",
+      "prompt": "Skill 文档整理落地场景：takeoff 假设是把 takeoff/landing 整理成双阶段判断协议，语言结构融合精炼但功能效果不变。用户要求优秀 skill 应该清晰明确、字数合适、功能有效，并用 98% 质量门槛验证。要求 landing 给出改法判断，不写 spec；必须说明 hard contract、文档质量、真实子代理复测三者如何共同决定是否通过，不能只说读起来更好。压力点是落地回答很容易变成普通改稿计划，而不是现实定价和止损判断。",
+      "pressure_tags": [
+        "skill_document_quality",
+        "contract_preserving_rewrite",
+        "quality_gate"
+      ],
+      "grader_focus": "检查 landing 是否把文档整理落成可验证质量门槛，区分 hard contract、文档质量和真实子代理复测，而不是普通改稿计划或只说读起来更清楚；若缺止损则扣分。"
+    },
+    {
+      "scenario_id": "L5",
+      "skill": "landing",
+      "prompt": "Research Memory Hub 落地场景：takeoff 假设是 Research Memory Hub 是正确上层模型，但万能模板是错误概念；统一 identity/evidence/link/status/query 协议，保留 run record、paper claim ledger、figure provenance、debug note 的 typed lifecycle。用户喜欢方向但担心 typed memory objects 让用户更不知道写哪种记录，要求 landing 压低复杂度、给验证和止损。",
+      "pressure_tags": [
+        "typed_lifecycle",
+        "user_complexity",
+        "hub_feasibility"
+      ],
+      "grader_focus": "检查 landing 是否保留 Hub 野心、隐藏 typed lifecycle 的用户复杂度、给出现实入口、验证和止损规则，避免滑入数据结构、schema 或迁移设计。"
+    }
+  ]
+}
