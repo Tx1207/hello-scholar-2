@@ -13,6 +13,25 @@ Write the test first. Watch it fail. Write minimal code to pass.
 
 **Violating the letter of the rules is violating the spirit of the rules.**
 
+## Evidence Artifacts
+
+In this skill, a "test" means the cheapest evidence artifact that can fail for the right reason before implementation. For ordinary deterministic code, that is usually a unit or integration test. For AI, agent, RAG, prompt, skill, or research work, it may be an eval case, trajectory check, benchmark smoke run, scorer, or pressure scenario.
+
+Choose the cheapest pattern that proves the intended behavior:
+
+| Pattern | Use for | Cost |
+|---------|---------|------|
+| `behavior-unit-test` | deterministic functions, parsers, CLI behavior | fast |
+| `contract-integration-test` | APIs, file formats, tool protocols | fast/focused |
+| `prompt-eval-case` | prompts, extraction, classification, rewriting | fast/focused |
+| `rag-eval-case` | retrieval, citations, grounding | focused |
+| `agent-trajectory-test` | tool use, multi-turn agents, handoffs | focused |
+| `research-benchmark` | train/eval/ablation/reproduction | expensive/scheduled |
+| `skill-pressure-test` | skill or agent-process behavior | focused |
+| `macro-eval` | cross-trace or multi-agent behavior patterns | expensive/scheduled |
+
+For full pattern definitions and examples, read `references/evidence-pattern-gallery.md`.
+
 ## When to Use
 
 **Always:**
@@ -68,9 +87,9 @@ digraph tdd_cycle {
 }
 ```
 
-### RED - Write Failing Test
+### RED - Write Failing Evidence
 
-Write one minimal test showing what should happen.
+Write one minimal evidence artifact showing what should happen. Keep it cheap enough for the inner loop, and make sure it will fail for the intended reason before implementation.
 
 <Good>
 ```typescript
@@ -106,9 +125,10 @@ Vague name, tests mock not code
 </Bad>
 
 **Requirements:**
-- One behavior
+- One behavior, scenario, or eval case
 - Clear name
-- Real code (no mocks unless unavoidable)
+- Real code, real prompt, real trace, or real scorer (mocks only if unavoidable)
+- Small enough to run at the selected cost tier
 
 ### Verify RED - Watch It Fail
 
@@ -119,9 +139,9 @@ npm test path/to/test.test.ts
 ```
 
 Confirm:
-- Test fails (not errors)
+- Evidence fails (not errors)
 - Failure message is expected
-- Fails because feature missing (not typos)
+- Fails because behavior is missing (not typos, broken setup, or noisy eval)
 
 **Test passes?** You're testing existing behavior. Fix test.
 
@@ -202,6 +222,7 @@ Next failing test for next feature.
 | **Minimal** | One thing. "and" in name? Split it. | `test('validates email and domain and whitespace')` |
 | **Clear** | Name describes behavior | `test('test1')` |
 | **Shows intent** | Demonstrates desired API | Obscures what code should do |
+| **Right-sized** | Fast RED, stronger confidence gate later | Full benchmark in every edit loop |
 
 ## Why Order Matters
 
@@ -328,13 +349,13 @@ Extract validation for multiple fields if needed.
 
 Before marking work complete:
 
-- [ ] Every new function/method has a test
-- [ ] Watched each test fail before implementing
-- [ ] Each test failed for expected reason (feature missing, not typo)
-- [ ] Wrote minimal code to pass each test
-- [ ] All tests pass
+- [ ] Every new behavior has a test or evidence artifact
+- [ ] Watched each evidence artifact fail before implementing
+- [ ] Each failure happened for the expected reason (behavior missing, not typo/setup/noise)
+- [ ] Wrote minimal code to pass the selected gate
+- [ ] Required tests/evals/checks pass
 - [ ] Output pristine (no errors, warnings)
-- [ ] Tests use real code (mocks only if unavoidable)
+- [ ] Evidence uses real code, prompts, traces, scorers, or commands (mocks only if unavoidable)
 - [ ] Edge cases and errors covered
 
 Can't check all boxes? You skipped TDD. Start over.
@@ -361,10 +382,12 @@ When adding mocks or test utilities, read @testing-anti-patterns.md to avoid com
 - Adding test-only methods to production classes
 - Mocking without understanding dependencies
 
+When testing AI, agent, prompt, RAG, research, or skill behavior, read `references/evidence-pattern-gallery.md` to choose the right evidence pattern and cost tier.
+
 ## Final Rule
 
 ```
-Production code → test exists and failed first
+Production behavior → evidence artifact exists and failed first
 Otherwise → not TDD
 ```
 
