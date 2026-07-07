@@ -1,0 +1,4 @@
+interface:
+  display_name: "坠机"
+  short_description: "轻量检查 AI 当前最没把握的地方和用户可能遗漏的盲区"
+  default_prompt: "使用 $crash-audit 做一次坠机检查，暴露当前最没把握的点和我可能没意识到的盲区。"

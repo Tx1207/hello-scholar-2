@@ -1,0 +1,176 @@
+{
+  "name": "crash-audit regression scenarios",
+  "version": 1,
+  "purpose": "Reusable pressure scenarios for testing the crash-audit skill after edits. Keep these prompts stable unless the skill's intended behavior changes.",
+  "answer_quality_rubric_100": [
+    {
+      "criterion": "Explicit manual trigger, no automatic run",
+      "points": 15,
+      "pass_signal": "Uses crash-audit only when the user explicitly triggers it, and declines or routes normally when the user did not ask for an uncertainty/blind-spot audit."
+    },
+    {
+      "criterion": "Strictly answers only two questions",
+      "points": 25,
+      "pass_signal": "Outputs only the two sections for least confidence and user blind spots; no third question, fixed tail module, summary module, next-step module, risk matrix, or verdict section."
+    },
+    {
+      "criterion": "Each item includes reasoning and verification",
+      "points": 25,
+      "pass_signal": "Each uncertainty includes why confidence is low, impact, and fastest verification; each blind spot includes why it matters, what should change if true, and fastest verification."
+    },
+    {
+      "criterion": "Specific, non-generic, non-fabricated findings",
+      "points": 15,
+      "pass_signal": "Findings are tied to the scenario context, avoid generic disclaimers, and do not invent dramatic risks when evidence is weak."
+    },
+    {
+      "criterion": "Does not steal adjacent skill responsibilities",
+      "points": 10,
+      "pass_signal": "Does not turn into takeoff, landing, code review, project planning, or implementation advice unless the user separately asks."
+    },
+    {
+      "criterion": "Concise output",
+      "points": 10,
+      "pass_signal": "Lists at most 3 items per section by default and stays readable as a lightweight audit."
+    }
+  ],
+  "skill_quality_rubric_100": [
+    {
+      "criterion": "Bilingual file structure",
+      "points": 15,
+      "pass_signal": "SKILL.md is the English primary skill; SKILL.zh_CN.md exists and contains the Chinese version; both use the same name."
+    },
+    {
+      "criterion": "Trigger metadata quality",
+      "points": 20,
+      "pass_signal": "Frontmatter description makes explicit triggering clear, covers the agreed Chinese and English triggers, and does not imply automatic execution."
+    },
+    {
+      "criterion": "Scope discipline",
+      "points": 20,
+      "pass_signal": "The skill preserves the two-question spirit, forbids third modules, avoids risk matrices, and separates itself from takeoff/landing."
+    },
+    {
+      "criterion": "Operational clarity",
+      "points": 15,
+      "pass_signal": "The workflow and output format are concrete enough that another agent can execute the skill without extra explanation."
+    },
+    {
+      "criterion": "Concise maintainable documentation",
+      "points": 10,
+      "pass_signal": "No TODO placeholders, no unnecessary resources, no bloated rationale, and no duplicated guidance that creates drift."
+    },
+    {
+      "criterion": "Regression assets",
+      "points": 8,
+      "pass_signal": "Saved scenarios and scoring rules exist so future edits can be tested against the same prompts."
+    },
+    {
+      "criterion": "UI metadata alignment",
+      "points": 7,
+      "pass_signal": "agents/openai.yaml exists and matches the skill purpose without promising behavior outside the skill."
+    },
+    {
+      "criterion": "Install and Windows compatibility",
+      "points": 5,
+      "pass_signal": "The package can be copied into a Codex skills directory using cross-platform Python path operations, with no POSIX-only install assumptions in the reusable test."
+    }
+  ],
+  "passing_thresholds": {
+    "answer_quality_average": 98,
+    "answer_quality_min_per_scenario": 95,
+    "skill_quality": 98
+  },
+  "scenarios": [
+    {
+      "id": "CA-01",
+      "title": "Skill finalization audit in Chinese",
+      "language": "zh_CN",
+      "should_trigger": true,
+      "prompt": "对话背景：我们正在把两个 AI 会话收尾问题写成一个手动触发的 skill，名字叫“坠机”。原则是两问就行：1. What are you least confident about right now. 2. What's the biggest thing I'm missing about the situation right now. What don't I realize? 不加第三问，不做风险矩阵，不接入主链路。用户说：坠机一下，看看这个 skill 现在还有哪里可能翻车。",
+      "expected_focus": "Audit the current skill design, not redesign it. Use exactly two sections. Mention trigger boundary, output bloat, or over-dramatization only if tied to context.",
+      "failure_modes": ["Adds a third recommendation section", "Turns into skill design proposal", "Uses risk matrix", "Lists generic risks"]
+    },
+    {
+      "id": "CA-02",
+      "title": "English original two-question trigger",
+      "language": "en",
+      "should_trigger": true,
+      "prompt": "Context: A product lead is about to approve a roadmap recommendation from the assistant. The recommendation depended on a short discussion, not user interviews or metrics. User says: Before I trust this plan, what are you least confident about right now, and what am I missing?",
+      "expected_focus": "Answer in English with two sections. Surface low confidence around missing customer evidence and blind spots around approving a roadmap from thin evidence.",
+      "failure_modes": ["Gives full roadmap advice", "Adds a next steps section", "Generic caveats without verification"]
+    },
+    {
+      "id": "CA-03",
+      "title": "Low-risk translation audit should not invent danger",
+      "language": "zh_CN",
+      "should_trigger": true,
+      "prompt": "对话背景：用户让助手把一段内部通知从英文翻成中文。内容很简单：下周五下午 3 点开团队例会，记得提交议题。助手已经给出翻译。用户说：我漏了什么？会不会坠机？",
+      "expected_focus": "Keep output short. It is acceptable to say there are no decision-changing blind spots. Do not manufacture major risks.",
+      "failure_modes": ["Catastrophizes low-risk translation", "Invents compliance/legal risks", "Produces long audit"]
+    },
+    {
+      "id": "CA-04",
+      "title": "Do not steal takeoff",
+      "language": "zh_CN",
+      "should_trigger": true,
+      "prompt": "对话背景：用户刚要求另一个助手“打开格局”重新判断一个知识管理产品的大方向。助手给了一个高格局方案。现在用户不是要继续起飞，而是说：先别继续拔高，坠机一下，告诉我你最没把握什么、我可能没意识到什么。",
+      "expected_focus": "Use crash-audit, not takeoff. Audit the bold direction's uncertainty and user blind spots without expanding the design space further.",
+      "failure_modes": ["Runs takeoff-style thesis/options/payoff ledger", "Keeps brainstorming big directions", "Adds implementation plan"]
+    },
+    {
+      "id": "CA-05",
+      "title": "Do not steal landing",
+      "language": "zh_CN",
+      "should_trigger": true,
+      "prompt": "对话背景：用户看了一个很大胆的自动化评测系统方案，但还没要求落地。用户说：先不要给落地版方案，坠机一下，这个判断哪里最不稳，我可能漏了什么？",
+      "expected_focus": "Audit uncertainty and blind spots only. Do not convert the idea into a feasible plan.",
+      "failure_modes": ["Produces landing plan", "Adds stage boundary/stop rule", "Gives ordered implementation steps"]
+    },
+    {
+      "id": "CA-06",
+      "title": "Code-change completion audit without code review",
+      "language": "zh_CN",
+      "should_trigger": true,
+      "prompt": "对话背景：助手刚修改了一个缓存失效 bug，并说测试通过。用户说：哪里可能翻车？坠机一下。注意我不是让你做完整 code review，只想知道你现在最没把握什么、我可能没意识到什么。",
+      "expected_focus": "Audit low-confidence aspects of the fix and user blind spots, without doing full code review or proposing patches.",
+      "failure_modes": ["Starts a full code review", "Suggests code changes", "Skips fastest verification"]
+    },
+    {
+      "id": "CA-07",
+      "title": "English strategic blind spot",
+      "language": "en",
+      "should_trigger": true,
+      "prompt": "Context: The assistant recommended that a small startup launch an enterprise sales motion based on two founder anecdotes. User says: Crash audit this. What don't I realize?",
+      "expected_focus": "English crash audit with two sections. Surface uncertainty about evidence and blind spots around sales-cycle cost, buyer access, and opportunity cost if justified.",
+      "failure_modes": ["Overwrites the go-to-market strategy", "Adds a pros/cons table", "No verification path"]
+    },
+    {
+      "id": "CA-08",
+      "title": "No meaningful blind spot case",
+      "language": "zh_CN",
+      "should_trigger": true,
+      "prompt": "对话背景：用户问助手今天 UTC 时间是多少，助手用系统时间回答：2026-07-07。用户说：坠机一下。",
+      "expected_focus": "Say there is little or no decision-changing uncertainty if appropriate, while still using two sections. Do not force big concerns.",
+      "failure_modes": ["Fabricates major uncertainty", "Turns into general time-zone lecture", "Adds extra modules"]
+    },
+    {
+      "id": "CA-09",
+      "title": "High-impact low-confidence item must be explicit",
+      "language": "zh_CN",
+      "should_trigger": true,
+      "prompt": "对话背景：用户准备根据助手建议把生产数据库迁移到新 schema。助手没有读实际 migration scripts，只根据用户描述给了方案。用户说：最没把握什么？我漏了什么？",
+      "expected_focus": "Clearly mark high-impact low-confidence uncertainty around not reading scripts/data contracts. Recommend verification inside the item before trusting the conclusion.",
+      "failure_modes": ["Soft-pedals production risk", "Gives migration plan", "Does not say fastest verification"]
+    },
+    {
+      "id": "CA-10",
+      "title": "No explicit trigger should not run crash-audit",
+      "language": "zh_CN",
+      "should_trigger": false,
+      "prompt": "对话背景：用户刚看完一个普通解释，最后说：总结一下刚才讲了什么。用户没有要求坠机、翻车检查、不确定性审查或盲区审查。",
+      "expected_focus": "Do not run crash-audit. A correct response would provide a normal summary or state that crash-audit is not triggered.",
+      "failure_modes": ["Runs crash-audit automatically", "Outputs least-confidence/blind-spot sections", "Treats every session ending as a trigger"]
+    }
+  ]
+}

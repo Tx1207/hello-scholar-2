@@ -1,0 +1,115 @@
+{
+  "date": "2026-07-07",
+  "skill_path": "skills/hello-scholar/crash-audit",
+  "scenario_source": "test/fixtures/crash_audit_10_scenario_protocol.json",
+  "skill_revision_note": "After adding explicit no-risk-matrix / no-verdict-ladder / no-scoring-table rules to SKILL.md and SKILL.zh_CN.md.",
+  "thresholds": {
+    "answer_quality_average": 98,
+    "answer_quality_min_per_scenario": 95,
+    "skill_quality": 98
+  },
+  "answer_quality": {
+    "scores": [
+      {
+        "id": "CA-01",
+        "score": 100,
+        "deductions": [],
+        "notes": "Manual trigger; exactly two sections; no risk matrix, tail section, takeoff/landing drift, or redesign."
+      },
+      {
+        "id": "CA-02",
+        "score": 100,
+        "deductions": [],
+        "notes": "English response; focused on thin roadmap evidence and blind spots; no roadmap rewrite."
+      },
+      {
+        "id": "CA-03",
+        "score": 100,
+        "deductions": [],
+        "notes": "Low-risk translation case stayed concise and did not invent dramatic risks."
+      },
+      {
+        "id": "CA-04",
+        "score": 100,
+        "deductions": [],
+        "notes": "Did not continue takeoff; audited the high-level direction only."
+      },
+      {
+        "id": "CA-05",
+        "score": 100,
+        "deductions": [],
+        "notes": "Did not turn bold evaluation-system direction into landing plan."
+      },
+      {
+        "id": "CA-06",
+        "score": 100,
+        "deductions": [],
+        "notes": "Did not become full code review; focused on cache-fix uncertainty and blind spots."
+      },
+      {
+        "id": "CA-07",
+        "score": 100,
+        "deductions": [],
+        "notes": "English enterprise-sales case stayed in two-section crash-audit form."
+      },
+      {
+        "id": "CA-08",
+        "score": 100,
+        "deductions": [],
+        "notes": "Simple UTC date case did not catastrophize; stayed concise."
+      },
+      {
+        "id": "CA-09",
+        "score": 100,
+        "deductions": [],
+        "notes": "High-impact production database migration uncertainty was explicit without drifting into migration plan."
+      },
+      {
+        "id": "CA-10",
+        "score": 100,
+        "deductions": [],
+        "notes": "No explicit trigger case did not run crash-audit automatically."
+      }
+    ],
+    "average": 100,
+    "minimum": 100,
+    "passed": true
+  },
+  "skill_quality": {
+    "score": 100,
+    "deductions": [],
+    "notes": "Independent evaluator found matching English/Chinese skill files, explicit manual-trigger metadata, disciplined two-question scope, concrete workflow/output formats, concise documentation, saved regression scenarios, aligned OpenAI UI metadata, and cross-platform install-simulation coverage.",
+    "passed": true
+  },
+  "install_and_windows_compatibility": {
+    "date": "2026-07-07",
+    "method": "python3 -m unittest discover -s test -p 'test_crash_audit_skill.py'",
+    "passed": true,
+    "notes": "The deterministic install simulation copies skills/hello-scholar/crash-audit into a temporary Codex home with pathlib/tempfile/shutil.copytree, then verifies SKILL.md, SKILL.zh_CN.md, agents/openai.yaml, frontmatter, triggers, brainstorming boundary, and UI metadata. The reusable test avoids POSIX-only cp/mv/rmdir assumptions."
+  },
+  "routing_regression_after_brainstorming_boundary": {
+    "date": "2026-07-07",
+    "reason": "Added Do Not Use / 不要使用 rule: route requirements exploration, approach comparison, design/spec work, or design approval flow to brainstorming instead of crash-audit.",
+    "scores": [
+      {
+        "id": "CR-BR-01",
+        "score": 100,
+        "route": "crash-audit",
+        "notes": "When the user explicitly says not to brainstorm or write a spec and asks '坠机一下', crash-audit remains the correct route."
+      },
+      {
+        "id": "CR-BR-02",
+        "score": 100,
+        "route": "brainstorming",
+        "notes": "When the user asks to brainstorm a formal skill design spec, crash-audit does not trigger and brainstorming is the correct route."
+      }
+    ],
+    "minimum": 100,
+    "average": 100,
+    "passed": true
+  },
+  "verification_limits": [
+    "Scores are subagent rubric evaluations, not deterministic executable tests.",
+    "Official quick_validate.py was not used earlier because this environment lacked PyYAML/pip/venv; static frontmatter/content checks were used instead."
+  ]
+}
