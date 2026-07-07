@@ -8,6 +8,7 @@ const test = require("node:test");
 const { main, parseArgs, usageText } = require("../src/cli");
 const { formatSummary } = require("../src/cli");
 const {
+  hasInstructionBlock,
   removeInstructionBlock,
   upsertInstructionBlock,
 } = require("../src/instruction-blocks");
@@ -110,6 +111,24 @@ test("instruction blocks insert, replace, and remove by tool", () => {
   assert.doesNotMatch(removedCodex, /HELLO-SCHOLAR:BEGIN codex/);
   assert.match(removedCodex, /HELLO-SCHOLAR:BEGIN claude/);
   assert.match(removedCodex, /# Project Rules/);
+});
+
+test("instruction blocks detect and replace Windows CRLF managed blocks", () => {
+  const existingText = [
+    "<!-- HELLO-SCHOLAR:BEGIN codex -->",
+    "manual edit inside managed block",
+    "<!-- HELLO-SCHOLAR:END codex -->",
+    "# Project Rules",
+    "",
+  ].join("\r\n");
+
+  assert.equal(hasInstructionBlock(existingText, "codex"), true);
+
+  const replaced = upsertInstructionBlock(existingText, "codex", "new rules");
+  assert.equal(countMatches(replaced, /HELLO-SCHOLAR:BEGIN codex/g), 1);
+  assert.match(replaced, /new rules/);
+  assert.doesNotMatch(replaced, /manual edit inside managed block/);
+  assert.match(replaced, /# Project Rules/);
 });
 
 test("discoverSkills returns unique skill names from repository skills", () => {

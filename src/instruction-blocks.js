@@ -13,7 +13,8 @@ function wrapBlock(tool, content) {
 function blockRegex(tool) {
   const begin = beginMarker(tool).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const end = endMarker(tool).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`${begin}\\n[\\s\\S]*?\\n${end}\\n*`);
+  const lineBreak = "\\r?\\n";
+  return new RegExp(`${begin}${lineBreak}[\\s\\S]*?${lineBreak}${end}(?:${lineBreak})*`);
 }
 
 function hasInstructionBlock(existingText, tool) {
