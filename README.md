@@ -150,7 +150,7 @@ hello-scholar 不覆盖已有 `AGENTS.md` 或 `CLAUDE.md`。
 <!-- HELLO-SCHOLAR:END claude -->
 ```
 
-重复安装会替换已有 hello-scholar 块，不会重复插入。
+重复安装时，如果检测到对应工具的 hello-scholar 块，会先提醒备份块内手动修改；只有输入 `yes` 才会继续替换，不会重复插入。
 
 卸载时只删除对应工具的 hello-scholar 块。
 

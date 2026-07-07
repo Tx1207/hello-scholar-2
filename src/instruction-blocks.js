@@ -16,6 +16,10 @@ function blockRegex(tool) {
   return new RegExp(`${begin}\\n[\\s\\S]*?\\n${end}\\n*`);
 }
 
+function hasInstructionBlock(existingText, tool) {
+  return blockRegex(tool).test(existingText);
+}
+
 function upsertInstructionBlock(existingText, tool, blockContent) {
   const block = `${wrapBlock(tool, blockContent)}\n\n`;
   const regex = blockRegex(tool);
@@ -32,6 +36,7 @@ function removeInstructionBlock(existingText, tool) {
 module.exports = {
   beginMarker,
   endMarker,
+  hasInstructionBlock,
   removeInstructionBlock,
   upsertInstructionBlock,
   wrapBlock,

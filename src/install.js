@@ -1,7 +1,11 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { installSkillCopy, installSkillLink, uninstallSkillTarget } = require("./fs-ops");
-const { removeInstructionBlock, upsertInstructionBlock } = require("./instruction-blocks");
+const {
+  hasInstructionBlock,
+  removeInstructionBlock,
+  upsertInstructionBlock,
+} = require("./instruction-blocks");
 const { resolveHelloScholarRoot, resolveProjectRoot } = require("./project-root");
 const { discoverSkills } = require("./skill-discovery");
 
@@ -28,8 +32,16 @@ function readFileIfExists(filePath) {
   return fs.existsSync(filePath) ? fs.readFileSync(filePath, "utf8") : "";
 }
 
+function instructionPath(projectRoot, tool) {
+  return path.join(projectRoot, TOOL_CONFIG[tool].instructionFile);
+}
+
+function hasExistingInstructionBlock(projectRoot, tool) {
+  return hasInstructionBlock(readFileIfExists(instructionPath(projectRoot, tool)), tool);
+}
+
 function writeInstructionBlock(projectRoot, repoRoot, tool) {
-  const targetPath = path.join(projectRoot, TOOL_CONFIG[tool].instructionFile);
+  const targetPath = instructionPath(projectRoot, tool);
   const nextText = upsertInstructionBlock(
     readFileIfExists(targetPath),
     tool,
@@ -39,7 +51,7 @@ function writeInstructionBlock(projectRoot, repoRoot, tool) {
 }
 
 function removeInstruction(projectRoot, tool) {
-  const targetPath = path.join(projectRoot, TOOL_CONFIG[tool].instructionFile);
+  const targetPath = instructionPath(projectRoot, tool);
   if (!fs.existsSync(targetPath)) {
     return;
   }
@@ -91,6 +103,7 @@ function uninstall(options) {
 }
 
 module.exports = {
+  hasExistingInstructionBlock,
   install,
   uninstall,
 };

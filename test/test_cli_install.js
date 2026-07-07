@@ -2,9 +2,10 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
+const { Readable, Writable } = require("node:stream");
 const test = require("node:test");
 
-const { parseArgs, usageText } = require("../src/cli");
+const { main, parseArgs, usageText } = require("../src/cli");
 const { formatSummary } = require("../src/cli");
 const {
   removeInstructionBlock,
@@ -25,6 +26,18 @@ function listSkillNames() {
 
 function countMatches(text, pattern) {
   return (text.match(pattern) || []).length;
+}
+
+function makeCliIo(inputText = "") {
+  let output = "";
+  const stdin = Readable.from([inputText]);
+  const stdout = new Writable({
+    write(chunk, encoding, callback) {
+      output += chunk.toString();
+      callback();
+    },
+  });
+  return { stdin, stdout, getOutput: () => output };
 }
 
 test("parseArgs accepts supported commands", () => {
@@ -231,6 +244,108 @@ test("repeated install replaces instruction block instead of duplicating it", ()
     const agentsText = fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8");
     assert.equal(countMatches(agentsText, /HELLO-SCHOLAR:BEGIN codex/g), 1);
     assert.equal(countMatches(agentsText, /HELLO-SCHOLAR:END codex/g), 1);
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("cli install prompts before replacing an existing codex instruction block", async () => {
+  const projectRoot = makeTempProject();
+  try {
+    const agentsPath = path.join(projectRoot, "AGENTS.md");
+    const originalText = upsertInstructionBlock("", "codex", "manual edit inside managed block");
+    fs.writeFileSync(agentsPath, originalText, "utf8");
+
+    const io = makeCliIo("no\n");
+    await main(["install", "codex"], {
+      projectRoot,
+      repoRoot: REPO_ROOT,
+      stdin: io.stdin,
+      stdout: io.stdout,
+    });
+
+    const output = io.getOutput();
+    assert.match(output, /hello-scholar is already installed for codex/);
+    assert.match(output, /HELLO-SCHOLAR:BEGIN codex/);
+    assert.match(output, /Type "yes" to continue:/);
+    assert.match(output, /install codex cancelled/);
+    assert.equal(fs.readFileSync(agentsPath, "utf8"), originalText);
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("cli install continues after yes when replacing an existing codex instruction block", async () => {
+  const projectRoot = makeTempProject();
+  try {
+    const agentsPath = path.join(projectRoot, "AGENTS.md");
+    fs.writeFileSync(
+      agentsPath,
+      upsertInstructionBlock("", "codex", "manual edit inside managed block"),
+      "utf8"
+    );
+
+    const io = makeCliIo("yes\n");
+    await main(["install", "codex"], {
+      projectRoot,
+      repoRoot: REPO_ROOT,
+      stdin: io.stdin,
+      stdout: io.stdout,
+    });
+
+    const agentsText = fs.readFileSync(agentsPath, "utf8");
+    assert.match(io.getOutput(), /install codex: installed/);
+    assert.match(agentsText, /hello-scholar Guide/);
+    assert.doesNotMatch(agentsText, /manual edit inside managed block/);
+    assert.equal(countMatches(agentsText, /HELLO-SCHOLAR:BEGIN codex/g), 1);
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("cli install does not prompt on first install", async () => {
+  const projectRoot = makeTempProject();
+  try {
+    const io = makeCliIo("");
+    await main(["install", "codex"], {
+      projectRoot,
+      repoRoot: REPO_ROOT,
+      stdin: io.stdin,
+      stdout: io.stdout,
+    });
+
+    const output = io.getOutput();
+    assert.doesNotMatch(output, /Type "yes" to continue:/);
+    assert.match(output, /install codex: installed/);
+    assert.match(
+      fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8"),
+      /HELLO-SCHOLAR:BEGIN codex/
+    );
+  } finally {
+    fs.rmSync(projectRoot, { recursive: true, force: true });
+  }
+});
+
+test("cli install prompts for claude using claude markers", async () => {
+  const projectRoot = makeTempProject();
+  try {
+    const claudePath = path.join(projectRoot, "CLAUDE.md");
+    const originalText = upsertInstructionBlock("", "claude", "manual claude edit");
+    fs.writeFileSync(claudePath, originalText, "utf8");
+
+    const io = makeCliIo("no\n");
+    await main(["install", "claude"], {
+      projectRoot,
+      repoRoot: REPO_ROOT,
+      stdin: io.stdin,
+      stdout: io.stdout,
+    });
+
+    const output = io.getOutput();
+    assert.match(output, /hello-scholar is already installed for claude/);
+    assert.match(output, /HELLO-SCHOLAR:BEGIN claude/);
+    assert.match(output, /HELLO-SCHOLAR:END claude/);
+    assert.equal(fs.readFileSync(claudePath, "utf8"), originalText);
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
