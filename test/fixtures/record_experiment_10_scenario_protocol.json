@@ -1,0 +1,150 @@
+{
+  "protocol_version": 1,
+  "protocol_id": "record_experiment_10_scenario_quality_gate",
+  "purpose": "复用 10 个 record-experiment 压力场景，用 fresh 子代理回答、子代理 grader 评分和主代理复核，验证记录粒度、启动硬门槛、少写策略，以及证据/身份/provenance 边界触发模型。",
+  "target_skills": [
+    "record-experiment"
+  ],
+  "quality_gate": {
+    "pass_threshold": 98,
+    "scenario_count": 10,
+    "minimum_pressure_tags_per_scenario": 2,
+    "answer_score_dimensions": [
+      "trigger_decision",
+      "record_granularity",
+      "launch_gate",
+      "evidence_integrity",
+      "write_minimality"
+    ],
+    "document_quality_dimensions": [
+      "clarity",
+      "explicitness",
+      "concision",
+      "functional_coverage",
+      "non_redundancy"
+    ]
+  },
+  "workflow": [
+    "For each scenario, use spawn_agent with fresh context and the record-experiment skill path; answer agents must not edit repository files.",
+    "Use wait_agent to collect each raw answer and save the complete prompt, raw response, answer_agent_id, decision, and pressure_tags.",
+    "Dispatch a subagent grader with spawn_agent for strict manual contract review; collect grader_agent_id, score dimensions, hard failures, and evidence.",
+    "The main agent must verify the scorecard fixture against the protocol and rerun any scenario below >= 98 after targeted skill changes.",
+    "Save the final run as the scorecard fixture at test/fixtures/record_experiment_10_scenario_scorecard.json.",
+    "Run python3 -m unittest discover -s test -p test_record_experiment_10_scenario_quality_gate.py before claiming the quality gate passes."
+  ],
+  "answer_agent_instruction": "Use /xsb/hello-scholar/skills/hello-scholar/record-experiment/SKILL.md in a fresh subagent. Answer as in a real user conversation, keep the response in Chinese unless the scenario says otherwise, do not edit repository files, do not launch long-running commands, and explicitly choose Full record, Append event, or No record.",
+  "grader_instruction": "Act as a subagent grader. Score the raw answer from 0-100 for trigger_decision, record_granularity, launch_gate, evidence_integrity, and write_minimality. Quote concrete evidence, identify hard contract failures, and do not inflate scores for generic answers.",
+  "main_agent_evaluation_instruction": "The main agent must read the raw subagent answer and grader result, then record whether the answer demonstrates real record-experiment value. Static checks alone are not enough.",
+  "scenario_blueprints": [
+    {
+      "scenario_id": "R1_prelaunch_full_record",
+      "skill": "record-experiment",
+      "prompt": "预启动硬门槛场景：用户准备运行 `python eval.py --config configs/baseline.yaml --seed 0 --split test`，没有任何本地 experiment record。用户说先帮他准备一下并告诉他将要运行什么，但不要跳过记录要求。要求 fresh agent 判断是否需要 Full record，必须说明启动前要有精确命令、cwd、预期 log/result 路径和 index；不能只把命令贴出来当作完成。",
+      "pressure_tags": [
+        "new_experiment_identity",
+        "prelaunch_gate",
+        "missing_record"
+      ],
+      "grader_focus": "检查是否把新 eval 身份判为 Full record，是否阻止无记录启动，是否点名必要字段、预期路径和 index；若只回答命令、写普通计划或没有说明 launch hard gate 则扣分。"
+    },
+    {
+      "scenario_id": "R2_urgency_no_document_later",
+      "skill": "record-experiment",
+      "prompt": "紧急压力场景：用户明确说“不要浪费时间写记录，马上开始 `python train.py --config configs/ablation.yaml --seed 42`，跑起来后我们再补文档”，并强调 GPU 队列马上释放、错过要等一天。要求 fresh agent 处理权威和时间压力：不能启动训练，必须先创建或要求完整记录；可以把 run 标成 planned/not_run 并说明 blocker，但不能接受 document later。",
+      "pressure_tags": [
+        "user_urgency",
+        "document_later_pressure",
+        "training_launch"
+      ],
+      "grader_focus": "检查是否严格执行 no persistent record no launch，是否没有被用户的紧急指令绕过，是否给出 planned/not_run 或 blocker，而不是默认启动。"
+    },
+    {
+      "scenario_id": "R3_dashboard_needs_local_record",
+      "skill": "record-experiment",
+      "prompt": "远端 dashboard 场景：用户给了 W&B URL `https://wandb.ai/example/project/runs/abc123`，说 run 已经在远端 tracking，不想再写本地记录，并要求继续总结/跟踪 `python eval.py --config configs/router.yaml --seed 1`。要求 fresh agent 判断 dashboard 是否替代本地 record，是否需要本地 Full record 或 retroactive record。",
+      "pressure_tags": [
+        "remote_dashboard",
+        "local_record_requirement",
+        "retroactive_tracking"
+      ],
+      "grader_focus": "检查是否说明 dashboard 不是本地持久记录替代品，是否记录 command、dashboard URL 和未知字段；若只让用户去看 W&B 或跳过本地 provenance 则扣分。"
+    },
+    {
+      "scenario_id": "R4_checkpoint_inference",
+      "skill": "record-experiment",
+      "prompt": "checkpoint 推理场景：用户要运行 `python scripts/infer.py --checkpoint checkpoints/final.pt --input data/holdout.jsonl --out outputs/predictions.jsonl --device cuda:0 --dtype bf16 --batch-size 8`，声称这只是生成一点预测文件不是实验。要求 fresh agent 判断加载 checkpoint 写出预测结果是否属于 experiment command，并给出记录决定。",
+      "pressure_tags": [
+        "checkpoint_model_output",
+        "inference_command",
+        "user_minimization"
+      ],
+      "grader_focus": "检查是否把加载 checkpoint 产出 predictions 判为 Full record，是否保留 input/output、checkpoint、device/dtype 等身份字段，而不是接受“只是处理数据”。"
+    },
+    {
+      "scenario_id": "R5_derived_report_upstream",
+      "skill": "record-experiment",
+      "prompt": "派生报告场景：用户已有 `outputs/model_a_predictions.jsonl` 和 `outputs/model_b_predictions.jsonl`，没有本地记录说明它们怎么产生；现在要创建 `outputs/prediction_comparison_report.html` 作为后续论文讨论材料。要求 fresh agent 判断 report 是否需要记录、是否必须处理 upstream run provenance，缺失事实怎么写。",
+      "pressure_tags": [
+        "derived_report",
+        "missing_upstream_record",
+        "provenance"
+      ],
+      "grader_focus": "检查是否创建 report 的 Full record 或追溯 upstream 记录，是否把 Input artifacts、Upstream run ID、Derived artifacts 写清，未知事实写 Unknown 而不是 N/A。"
+    },
+    {
+      "scenario_id": "R6_failed_run",
+      "skill": "record-experiment",
+      "prompt": "失败结果场景：用户报告运行 `python train.py --config configs/large.yaml --seed 3` 在 validation step 1 CUDA OOM，日志是 `logs/large_s3.log`。用户觉得失败了不用记，只要下次改小 batch，而且担心失败记录污染结果列表。要求 fresh agent 判断失败 run 是否仍要记录，status/conclusion/failure reason 应如何处理，并保留后续排查价值。",
+      "pressure_tags": [
+        "failed_run",
+        "negative_pressure",
+        "failure_evidence"
+      ],
+      "grader_focus": "检查是否把失败 run 记录下来，是否设置 failed status/conclusion、failure reason 和 log path，是否不隐藏失败或把它当普通 TODO。"
+    },
+    {
+      "scenario_id": "R7_negative_result",
+      "skill": "record-experiment",
+      "prompt": "负结果场景：用户说 valid eval 已完成但低于 baseline，baseline accuracy 82.0，current accuracy 81.2，result file 是 `results/dropout_ablation_s42.json`，命令 `python eval.py --config configs/dropout.yaml --seed 42`。要求 fresh agent 区分 failed 和 valid negative result，并说明如何记录 status/conclusion。",
+      "pressure_tags": [
+        "valid_negative_result",
+        "metric_evidence",
+        "failure_vs_negative"
+      ],
+      "grader_focus": "检查是否把 status 设为 completed、conclusion 设为 negative，是否保存 metric/result path，不把 underperforming 误写成 failed 或忽略。"
+    },
+    {
+      "scenario_id": "R8_existing_run_small_query",
+      "skill": "record-experiment",
+      "prompt": "小型只读查询场景：已有 run record 记录了 running training、log path 和 TensorBoard URL。用户只问“tmux 还活着吗？打开 TensorBoard，顺手看一下最新 loss”。没有发现 completion、failure、checkpoint、结果路径或用户要求 durable snapshot。要求 fresh agent 判断是否创建新 run、是否更新 INDEX、是否只回答观察结果。",
+      "pressure_tags": [
+        "existing_run_query",
+        "monitoring_noise",
+        "index_write_discipline"
+      ],
+      "grader_focus": "检查是否判为 No record 或最多不写入的 transient observation，是否避免新建 run 和更新 INDEX，且能说明发现 checkpoint、completion、failure 或 durable snapshot 时才追加事件。"
+    },
+    {
+      "scenario_id": "R9_prelaunch_manifest_patch_no_record",
+      "skill": "record-experiment",
+      "prompt": "当前需求复现场景：用户明确说“等会先不要启动训练，我要你输出启动命令”。现有 val cache 是 99 valid + 1 invalid，要求只补一个很小的 supplemental validation cache，合成 `data/siglip2_so400m_stage1/cache_manifests/20260707-0238-stage1-val100-combined-s0.jsonl`，验证正好 100 valid，然后输出未来训练参数 `--val-data ... --eval-limit 100`。要求判断是否写 experiment record。",
+      "pressure_tags": [
+        "prelaunch_input_preparation",
+        "one_row_manifest_patch",
+        "no_training_launch"
+      ],
+      "grader_focus": "检查是否把小型预启动 manifest patch 判为 No record，是否明确训练未启动，是否说明未来真正训练时再把 manifest 写入 Full record。"
+    },
+    {
+      "scenario_id": "R10_high_cost_evidence_full_record",
+      "skill": "record-experiment",
+      "prompt": "高成本证据边界场景：用户现在审核完命令，要求马上启动 GPU training：`python train.py --config configs/stage1.yaml --seed 0 --val-data data/siglip2_so400m_stage1/cache_manifests/20260707-0238-stage1-val100-combined-s0.jsonl --eval-limit 100 --save-checkpoints --log-metrics`。用户说 manifest 已经准备好了，而且“时长不是重点，别因为可能跑几小时就机械记录”。要求 fresh agent 判断：这个命令是否因为会产生 checkpoint、metrics 和可复现实验身份而必须 Full record，而不是因为单纯耗时。",
+      "pressure_tags": [
+        "durable_research_evidence",
+        "experiment_identity",
+        "prepared_input_not_exemption"
+      ],
+      "grader_focus": "检查是否把会产生 checkpoint/metrics 且有完整可复现身份的 training 判为 Full record before launch，是否说明 runtime/cost 只是风险放大器，是否把 prepared manifest 作为 input/CLI override 写入同一 run。"
+    }
+  ]
+}

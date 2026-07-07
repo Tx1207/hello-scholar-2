@@ -166,6 +166,14 @@ class Scenario:
     required_regex: tuple[str, ...] = ()
 
 
+APPEND_EVENT_EXAMPLES = (
+    "Is the tmux training run still alive?",
+    "Open TensorBoard for the current run.",
+    "Show me the latest loss from the existing log.",
+    "Do we have intermediate checkpoints?",
+)
+
+
 def prompt(body: str) -> str:
     return (
         "Use the record-experiment skill at "
@@ -478,6 +486,8 @@ def validate_scenario_result(
 
     if not scenario.expect_records:
         assert_no_records_exist(testcase, workspace)
+        if response_text:
+            assert_contains_all(testcase, response_text, scenario.required_text)
         return
 
     record_text = assert_records_exist(testcase, workspace, min_records=scenario.min_run_records)
@@ -621,6 +631,104 @@ def write_run_record(
 
 
 class RecordExperimentSkillStaticTests(unittest.TestCase):
+    def test_frontmatter_triggers_use_experiment_identity_not_monitoring_queries(self) -> None:
+        english = skill_description(SKILL_MD).lower()
+        chinese = skill_description(SKILL_ZH)
+
+        self.assertIn("experiment identity", english)
+        self.assertIn("existing recorded run", english)
+        self.assertIn("实验身份", chinese)
+        self.assertIn("已有记录 run", chinese)
+        for term in ("monitoring", "log monitoring", "open tensorboard", "latest loss"):
+            self.assertNotIn(term, english)
+        for term in ("监控", "打开 tensorboard", "最新 loss"):
+            self.assertNotIn(term, chinese.lower())
+
+    def test_skill_defines_full_record_append_event_no_record_granularity(self) -> None:
+        english = SKILL_MD.read_text(encoding="utf-8")
+        chinese = SKILL_ZH.read_text(encoding="utf-8")
+
+        for term in (
+            "Full record",
+            "Append event",
+            "No record",
+            "Experiment identity",
+            "Index update discipline",
+        ):
+            self.assertIn(term, english)
+        for term in ("完整记录", "追加事件", "不记录", "实验身份", "INDEX 更新纪律"):
+            self.assertIn(term, chinese)
+
+    def test_small_existing_run_queries_do_not_create_new_run_or_index_update(self) -> None:
+        english = SKILL_MD.read_text(encoding="utf-8")
+        chinese = SKILL_ZH.read_text(encoding="utf-8")
+
+        for example in APPEND_EVENT_EXAMPLES:
+            self.assertIn(example, english)
+        self.assertIn("do not create a new run record", english)
+        self.assertIn("do not update `INDEX.md`", english)
+        self.assertIn("不要创建新的 run record", chinese)
+        self.assertIn("不要更新 `INDEX.md`", chinese)
+
+    def test_path_changes_distinguish_launch_identity_from_runtime_events(self) -> None:
+        english = SKILL_MD.read_text(encoding="utf-8")
+        chinese = SKILL_ZH.read_text(encoding="utf-8")
+
+        self.assertIn("intended log/result/checkpoint paths at launch", english)
+        self.assertIn("Actual paths discovered during the same run", english)
+        self.assertIn("启动时预期日志/结果/checkpoint 路径", chinese)
+        self.assertIn("同一次 run 运行中发现", chinese)
+
+    def test_prelaunch_manifest_patch_without_launch_is_no_record(self) -> None:
+        english = SKILL_MD.read_text(encoding="utf-8")
+        chinese = SKILL_ZH.read_text(encoding="utf-8")
+        examples = (SKILL_DIR / "references" / "examples.md").read_text(encoding="utf-8")
+
+        for term in ("Prepared input, record at launch", "cache manifest", "future launch"):
+            self.assertIn(term, english)
+        for term in ("准备好的输入，启动时记录", "cache manifest", "未来启动"):
+            self.assertIn(term, chinese)
+        self.assertIn("do not create a new run record", english)
+        self.assertIn("不要创建新的 run record", chinese)
+        self.assertIn("20260707-0238-stage1-val100-combined-s0.jsonl", examples)
+        self.assertIn("--eval-limit 100", examples)
+        self.assertIn("training is not launched", examples)
+
+    def test_record_trigger_uses_evidence_identity_and_provenance_boundaries(self) -> None:
+        english = SKILL_MD.read_text(encoding="utf-8")
+        chinese = SKILL_ZH.read_text(encoding="utf-8")
+        field_guide = FIELD_GUIDE.read_text(encoding="utf-8")
+        examples = (SKILL_DIR / "references" / "examples.md").read_text(encoding="utf-8")
+
+        for term in (
+            "durable research evidence",
+            "experiment identity",
+            "upstream provenance",
+            "Runtime and compute cost are risk amplifiers, not standalone triggers",
+        ):
+            self.assertIn(term, english)
+        for term in ("持久科研证据", "实验身份", "上游 provenance", "风险放大器"):
+            self.assertIn(term, chinese)
+        self.assertIn("risk amplifiers", field_guide)
+        self.assertIn("quick prediction export", examples)
+        self.assertIn("Decision: Full record before launch", examples)
+
+    def test_examples_include_common_decision_cheatsheet(self) -> None:
+        examples = (SKILL_DIR / "references" / "examples.md").read_text(encoding="utf-8")
+
+        self.assertIn("Common decision cheatsheet", examples)
+        for term in (
+            "smoke test",
+            "tiny supplemental cache",
+            "existing run",
+            "checkpoint prediction",
+            "derived report",
+            "Decision: No record",
+            "Decision: Append event",
+            "Decision: Full record",
+        ):
+            self.assertIn(term, examples)
+
     def test_skill_description_covers_model_runs_and_outputs(self) -> None:
         english = skill_description(SKILL_MD)
         chinese = skill_description(SKILL_ZH)

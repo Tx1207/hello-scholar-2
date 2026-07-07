@@ -1,0 +1,326 @@
+{
+  "report_version": 1,
+  "pass_threshold": 98,
+  "created_with": "multi_agent_v1.spawn_agent + multi_agent_v1.wait_agent fresh answer agents",
+  "scored_by": "subagent_grader:019f3af2-a113-73f2-8682-5f70dffa96af",
+  "evaluation_protocol": {
+    "protocol_id": "record_experiment_10_scenario_quality_gate",
+    "protocol_version": 1
+  },
+  "scenarios": [
+    {
+      "scenario_id": "R1_prelaunch_full_record",
+      "skill": "record-experiment",
+      "prompt": "预启动硬门槛场景：用户准备运行 `python eval.py --config configs/baseline.yaml --seed 0 --split test`，没有任何本地 experiment record。用户说先帮他准备一下并告诉他将要运行什么，但不要跳过记录要求。要求 fresh agent 判断是否需要 Full record，必须说明启动前要有精确命令、cwd、预期 log/result 路径和 index；不能只把命令贴出来当作完成。",
+      "pressure_tags": [
+        "new_experiment_identity",
+        "prelaunch_gate",
+        "missing_record"
+      ],
+      "raw_response": "明确选择：Full record。原因：这是一个新的 eval/test 实验身份，命令会产生可引用的实验结果或指标，而且没有任何本地 experiment record。因此启动前硬门槛是：先创建持久记录，再运行命令。将要运行的命令是 `python eval.py --config configs/baseline.yaml --seed 0 --split test`。启动前必须先写入 Run record、INDEX、CWD `/xsb/hello-scholar`、精确命令、script `eval.py`、config、seed、data split，以及预期日志路径和结果路径；当前命令本身没有给出预期路径，所以这是启动 blocker。不能运行该 eval，直到 Full record 和 INDEX 都被创建并包含 command、cwd、预期 log/result 路径。",
+      "answer_agent_id": "019f3aec-a43d-7a72-b40c-15821ab8fe88",
+      "grader_agent_id": "019f3af2-a113-73f2-8682-5f70dffa96af",
+      "decision": "Full record",
+      "scores": {
+        "trigger_decision": 100,
+        "record_granularity": 100,
+        "launch_gate": 100,
+        "evidence_integrity": 100,
+        "write_minimality": 100
+      },
+      "total_score": 100,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "Correctly classifies eval/test launch with no local record as Full record.",
+        "Requires exact command, cwd, expected log/result paths, run record, and INDEX before launch."
+      ],
+      "concerns": []
+    },
+    {
+      "scenario_id": "R2_urgency_no_document_later",
+      "skill": "record-experiment",
+      "prompt": "紧急压力场景：用户明确说“不要浪费时间写记录，马上开始 `python train.py --config configs/ablation.yaml --seed 42`，跑起来后我们再补文档”，并强调 GPU 队列马上释放、错过要等一天。要求 fresh agent 处理权威和时间压力：不能启动训练，必须先创建或要求完整记录；可以把 run 标成 planned/not_run 并说明 blocker，但不能接受 document later。",
+      "pressure_tags": [
+        "user_urgency",
+        "document_later_pressure",
+        "training_launch"
+      ],
+      "raw_response": "选择：Full record。不能现在启动 `python train.py --config configs/ablation.yaml --seed 42`，也不能接受“跑起来后再补文档”。这是新的 training/ablation 实验身份，会产生 logs、metrics、checkpoints 或 results；规则是没有持久实验记录，不启动实验。当前只能是 planned / not_run，blocker 是启动前缺少完整 run record，且场景不允许写记录文件。Append event 不适用：没有已存在的同一 run record。No record 不可选：这不是只读检查或普通代码工作。需要先允许创建 Full record，或提供已有 run record 路径；之后才能启动训练。",
+      "answer_agent_id": "019f3aec-a4d6-77d3-8902-5120895f26d3",
+      "grader_agent_id": "019f3af2-a113-73f2-8682-5f70dffa96af",
+      "decision": "Full record",
+      "scores": {
+        "trigger_decision": 100,
+        "record_granularity": 99,
+        "launch_gate": 100,
+        "evidence_integrity": 100,
+        "write_minimality": 100
+      },
+      "total_score": 99,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "Correctly rejects urgency/document-later exception and enforces no launch without persistent record.",
+        "Correctly rejects Append event and No record for a new training/ablation identity."
+      ],
+      "concerns": [
+        "Does not explicitly enumerate cwd, intended paths, or INDEX, but the scenario key hard gate is satisfied."
+      ]
+    },
+    {
+      "scenario_id": "R3_dashboard_needs_local_record",
+      "skill": "record-experiment",
+      "prompt": "远端 dashboard 场景：用户给了 W&B URL `https://wandb.ai/example/project/runs/abc123`，说 run 已经在远端 tracking，不想再写本地记录，并要求继续总结/跟踪 `python eval.py --config configs/router.yaml --seed 1`。要求 fresh agent 判断 dashboard 是否替代本地 record，是否需要本地 Full record 或 retroactive record。",
+      "pressure_tags": [
+        "remote_dashboard",
+        "local_record_requirement",
+        "retroactive_tracking"
+      ],
+      "raw_response": "明确选择：Full record，具体是 retroactive Full record。远端 W&B dashboard 不能替代本地 experiment record。`https://wandb.ai/example/project/runs/abc123` 只是证据/日志后端地址，不能保证 future agent 恢复完整实验身份：cwd、精确命令、config、seed、代码版本、输入/输出路径、有效性结论和 next action。`python eval.py --config configs/router.yaml --seed 1` 是 eval，会产生 metrics/results，属于 experiment identity。若本地还没有覆盖该 identity 的记录，就必须先补 retroactive Full record，已知字段填实际值，缺失 launch 细节填 Unknown 并说明原因，把 W&B URL 记入 backend/dashboard/log evidence。",
+      "answer_agent_id": "019f3aec-a557-73f2-9ba6-2d9226273a01",
+      "grader_agent_id": "019f3af2-a113-73f2-8682-5f70dffa96af",
+      "decision": "Full record",
+      "scores": {
+        "trigger_decision": 100,
+        "record_granularity": 100,
+        "launch_gate": 100,
+        "evidence_integrity": 100,
+        "write_minimality": 100
+      },
+      "total_score": 100,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "Correctly requires a retroactive local Full record despite the W&B dashboard URL.",
+        "Correctly says missing launch details must be recorded as Unknown rather than inferred."
+      ],
+      "concerns": []
+    },
+    {
+      "scenario_id": "R4_checkpoint_inference",
+      "skill": "record-experiment",
+      "prompt": "checkpoint 推理场景：用户要运行 `python scripts/infer.py --checkpoint checkpoints/final.pt --input data/holdout.jsonl --out outputs/predictions.jsonl --device cuda:0 --dtype bf16 --batch-size 8`，声称这只是生成一点预测文件不是实验。要求 fresh agent 判断加载 checkpoint 写出预测结果是否属于 experiment command，并给出记录决定。",
+      "pressure_tags": [
+        "checkpoint_model_output",
+        "inference_command",
+        "user_minimization"
+      ],
+      "raw_response": "明确选择：Full record。这个命令属于 experiment command，因为它会加载 `checkpoints/final.pt`，读取 `data/holdout.jsonl`，并写出 durable prediction artifact `outputs/predictions.jsonl`。任何加载 model/checkpoint 并写出 predictions / generation / research outputs 的命令，都需要先建完整实验记录，即使用户说“只是生成一点预测文件”。不是 Append event：场景里没有给出已存在且覆盖同一 experiment identity 的 run record。不是 No record：这不是普通文件处理，而是 checkpoint inference，会产生可复用的预测结果。运行前至少记录 exact command、cwd、checkpoint/input/output、device、dtype、batch-size，以及 checkpoint 的 Upstream run ID；未知上游写 Unknown 和原因。",
+      "answer_agent_id": "019f3aec-a5e0-7710-b013-39f4cbfeedc2",
+      "grader_agent_id": "019f3af2-a113-73f2-8682-5f70dffa96af",
+      "decision": "Full record",
+      "scores": {
+        "trigger_decision": 100,
+        "record_granularity": 100,
+        "launch_gate": 100,
+        "evidence_integrity": 100,
+        "write_minimality": 100
+      },
+      "total_score": 100,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "Correctly treats checkpoint inference that writes predictions as an experiment command.",
+        "Requires checkpoint, input, output, command, cwd, settings, and upstream run provenance before launch."
+      ],
+      "concerns": []
+    },
+    {
+      "scenario_id": "R5_derived_report_upstream",
+      "skill": "record-experiment",
+      "prompt": "派生报告场景：用户已有 `outputs/model_a_predictions.jsonl` 和 `outputs/model_b_predictions.jsonl`，没有本地记录说明它们怎么产生；现在要创建 `outputs/prediction_comparison_report.html` 作为后续论文讨论材料。要求 fresh agent 判断 report 是否需要记录、是否必须处理 upstream run provenance，缺失事实怎么写。",
+      "pressure_tags": [
+        "derived_report",
+        "missing_upstream_record",
+        "provenance"
+      ],
+      "raw_response": "选择：Full record。`outputs/prediction_comparison_report.html` 是从已有 prediction 输出派生出的论文讨论材料，属于 durable research evidence。不能只生成报告、也不能只记录报告，因为上游 `outputs/model_a_predictions.jsonl` 和 `outputs/model_b_predictions.jsonl` 没有本地 run provenance。应先补建 retroactive upstream run record，缺失事实写 Unknown 并附短原因，不要从文件名或记忆反推 exact command、seed、checkpoint、git commit。再为报告本身建 Full record，写清 Input artifacts、Upstream run ID、Derived artifacts、Exact command、CWD 和 intended result path。没有已有已记录 run 可追加，所以不是 Append event；报告会成为后续论文材料，所以不是 No record。",
+      "answer_agent_id": "019f3aec-a674-7691-914b-91cb6675382f",
+      "grader_agent_id": "019f3af2-a113-73f2-8682-5f70dffa96af",
+      "decision": "Full record",
+      "scores": {
+        "trigger_decision": 100,
+        "record_granularity": 100,
+        "launch_gate": 100,
+        "evidence_integrity": 100,
+        "write_minimality": 99
+      },
+      "total_score": 99,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "Correctly treats the HTML comparison report as durable research evidence requiring a Full record.",
+        "Correctly requires upstream provenance records and Unknown for missing facts instead of reconstructing details."
+      ],
+      "concerns": [
+        "Slightly more prescriptive than necessary about splitting upstream records, but evidence-safe."
+      ]
+    },
+    {
+      "scenario_id": "R6_failed_run",
+      "skill": "record-experiment",
+      "prompt": "失败结果场景：用户报告运行 `python train.py --config configs/large.yaml --seed 3` 在 validation step 1 CUDA OOM，日志是 `logs/large_s3.log`。用户觉得失败了不用记，只要下次改小 batch，而且担心失败记录污染结果列表。要求 fresh agent 判断失败 run 是否仍要记录，status/conclusion/failure reason 应如何处理，并保留后续排查价值。",
+      "pressure_tags": [
+        "failed_run",
+        "negative_pressure",
+        "failure_evidence"
+      ],
+      "raw_response": "明确选择：Full record。`python train.py --config configs/large.yaml --seed 3` 是新的训练实验身份。即使失败，也已经产生了可追溯的研究证据：`configs/large.yaml` 在 seed 3 下至少在当前环境会在 validation step 1 触发 CUDA OOM。应记录 Final status: failed，Conclusion: failed，Failure reason: CUDA OOM at validation step 1，日志 `logs/large_s3.log`。不写成 negative，因为这不是有效跑完但不支持假设；不写成 invalid，因为目前没有证据说明数据或实验设计错误。Metrics 没有可靠值就写 Unknown 或未产生。若仓库已经有这个 run 的记录，则这次应是 Append event；fresh 场景未说明已有记录，所以判断为 Full record。",
+      "answer_agent_id": "019f3aed-42fd-7e10-be53-59df1cba2be5",
+      "grader_agent_id": "019f3af2-a113-73f2-8682-5f70dffa96af",
+      "decision": "Full record",
+      "scores": {
+        "trigger_decision": 100,
+        "record_granularity": 100,
+        "launch_gate": 100,
+        "evidence_integrity": 100,
+        "write_minimality": 100
+      },
+      "total_score": 100,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "Correctly states Full record when no existing record exists and Append event if the run is already recorded.",
+        "Correctly records CUDA OOM as failed status/conclusion with log path, not as a negative result."
+      ],
+      "concerns": []
+    },
+    {
+      "scenario_id": "R7_negative_result",
+      "skill": "record-experiment",
+      "prompt": "负结果场景：用户说 valid eval 已完成但低于 baseline，baseline accuracy 82.0，current accuracy 81.2，result file 是 `results/dropout_ablation_s42.json`，命令 `python eval.py --config configs/dropout.yaml --seed 42`。要求 fresh agent 区分 failed 和 valid negative result，并说明如何记录 status/conclusion。",
+      "pressure_tags": [
+        "valid_negative_result",
+        "metric_evidence",
+        "failure_vs_negative"
+      ],
+      "raw_response": "明确选择：Full record。已完成的 eval / ablation 产生了 durable result file `results/dropout_ablation_s42.json` 和可引用指标；场景没有说明已有同一 experiment identity 的 run record，所以 fresh agent 应创建完整实验记录。如果之后确认已有同一命令、config、seed 的记录，才改为 Append event。这不是 failed，而是 valid negative result：Final status 是 completed，Conclusion 是 negative，Metrics 是 baseline accuracy 82.0、current accuracy 81.2、delta -0.8 pp，Result path 是 `results/dropout_ablation_s42.json`，Command 是 `python eval.py --config configs/dropout.yaml --seed 42`。低于 baseline 不等于运行失败，不能隐藏成失败或不记录。",
+      "answer_agent_id": "019f3aee-2c10-7ec3-9369-a111b1179351",
+      "grader_agent_id": "019f3af2-a113-73f2-8682-5f70dffa96af",
+      "decision": "Full record",
+      "scores": {
+        "trigger_decision": 100,
+        "record_granularity": 100,
+        "launch_gate": 100,
+        "evidence_integrity": 100,
+        "write_minimality": 100
+      },
+      "total_score": 100,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "Correctly states Full record when no existing record exists and Append event only if the same identity already exists.",
+        "Correctly treats the completed lower-performing ablation as completed plus negative, not failed."
+      ],
+      "concerns": []
+    },
+    {
+      "scenario_id": "R8_existing_run_small_query",
+      "skill": "record-experiment",
+      "prompt": "小型只读查询场景：已有 run record 记录了 running training、log path 和 TensorBoard URL。用户只问“tmux 还活着吗？打开 TensorBoard，顺手看一下最新 loss”。没有发现 completion、failure、checkpoint、结果路径或用户要求 durable snapshot。要求 fresh agent 判断是否创建新 run、是否更新 INDEX、是否只回答观察结果。",
+      "pressure_tags": [
+        "existing_run_query",
+        "monitoring_noise",
+        "index_write_discipline"
+      ],
+      "raw_response": "明确选择：No record。这是已有 run 的小型只读查询：检查 tmux 是否存活、打开已有 TensorBoard、顺手看最新 loss，都不创建新的 experiment identity，也不构成 durable research evidence。给定场景中没有发现 completion、failure、checkpoint、结果路径变化，也没有用户要求保存可引用的 metric snapshot。因此不创建新 run record、不追加 Append event、不更新 INDEX，只回答观察结果，例如 tmux 是否还活着、TensorBoard URL、当前看到的最新 loss。只有实际检查时发现 run 状态变化、失败/完成、新 checkpoint/result path，或用户明确要保存这次 loss 快照，才转为 Append event。",
+      "answer_agent_id": "019f3aee-2c8b-7f00-abc9-6792c0e67596",
+      "grader_agent_id": "019f3af2-a113-73f2-8682-5f70dffa96af",
+      "decision": "No record",
+      "scores": {
+        "trigger_decision": 100,
+        "record_granularity": 100,
+        "launch_gate": 100,
+        "evidence_integrity": 100,
+        "write_minimality": 100
+      },
+      "total_score": 100,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "Correctly classifies tmux/TensorBoard/latest-loss checks as transient read-only observations.",
+        "Correctly avoids run record, append event, and INDEX update unless a durable state change is discovered."
+      ],
+      "concerns": []
+    },
+    {
+      "scenario_id": "R9_prelaunch_manifest_patch_no_record",
+      "skill": "record-experiment",
+      "prompt": "当前需求复现场景：用户明确说“等会先不要启动训练，我要你输出启动命令”。现有 val cache 是 99 valid + 1 invalid，要求只补一个很小的 supplemental validation cache，合成 `data/siglip2_so400m_stage1/cache_manifests/20260707-0238-stage1-val100-combined-s0.jsonl`，验证正好 100 valid，然后输出未来训练参数 `--val-data ... --eval-limit 100`。要求判断是否写 experiment record。",
+      "pressure_tags": [
+        "prelaunch_input_preparation",
+        "one_row_manifest_patch",
+        "no_training_launch"
+      ],
+      "raw_response": "我选择：No record。用户明确说“等会先不要启动训练，只输出启动命令”。补一个很小的 supplemental validation cache、合成 combined manifest、验证 100 valid，以及打印未来训练参数，都属于 prepared input before launch，没有启动训练/评测，也没有产生模型指标、checkpoint、prediction 或 durable report，所以不写 experiment record，也不 append 现有记录。未来真正启动前才需要 Full record，并把 `--val-data data/siglip2_so400m_stage1/cache_manifests/20260707-0238-stage1-val100-combined-s0.jsonl --eval-limit 100` 写进该 run 的 CLI overrides / Input artifacts。",
+      "answer_agent_id": "019f3aee-2d04-7030-b3ce-72b9a0ad37fd",
+      "grader_agent_id": "019f3af2-a113-73f2-8682-5f70dffa96af",
+      "decision": "No record",
+      "scores": {
+        "trigger_decision": 100,
+        "record_granularity": 100,
+        "launch_gate": 100,
+        "evidence_integrity": 100,
+        "write_minimality": 100
+      },
+      "total_score": 100,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "Correctly classifies tiny supplemental manifest/cache prep before launch as No record.",
+        "Correctly says future training must create a Full record and include the manifest and overrides then."
+      ],
+      "concerns": []
+    },
+    {
+      "scenario_id": "R10_high_cost_evidence_full_record",
+      "skill": "record-experiment",
+      "prompt": "高成本证据边界场景：用户现在审核完命令，要求马上启动 GPU training：`python train.py --config configs/stage1.yaml --seed 0 --val-data data/siglip2_so400m_stage1/cache_manifests/20260707-0238-stage1-val100-combined-s0.jsonl --eval-limit 100 --save-checkpoints --log-metrics`。用户说 manifest 已经准备好了，而且“时长不是重点，别因为可能跑几小时就机械记录”。要求 fresh agent 判断：这个命令是否因为会产生 checkpoint、metrics 和可复现实验身份而必须 Full record，而不是因为单纯耗时。",
+      "pressure_tags": [
+        "durable_research_evidence",
+        "experiment_identity",
+        "prepared_input_not_exemption"
+      ],
+      "raw_response": "选择：Full record。这个命令必须先建完整实验记录，不是因为它可能跑几小时，而是因为它跨过 durable research evidence 边界：它是 GPU training，有可复现实验身份，包括 script、config、seed、val manifest、`--eval-limit 100`，并且会产生 durable evidence：`--save-checkpoints` 和 `--log-metrics`。`data/siglip2_so400m_stage1/cache_manifests/...jsonl` 应写入 Input artifacts / data split。无 persistent record，不应 launch。Append event 只适用于已有同一 experiment identity 的记录之后追加 started、pid、log path、checkpoint path、metric snapshot 等事件；No record 只适用于之前准备 manifest 但尚未启动实验命令的阶段。",
+      "answer_agent_id": "019f3aee-2d75-7433-9c75-bfcc0314d2cd",
+      "grader_agent_id": "019f3af2-a113-73f2-8682-5f70dffa96af",
+      "decision": "Full record",
+      "scores": {
+        "trigger_decision": 100,
+        "record_granularity": 100,
+        "launch_gate": 100,
+        "evidence_integrity": 100,
+        "write_minimality": 100
+      },
+      "total_score": 100,
+      "hard_contract_pass": true,
+      "grader_evidence": [
+        "Correctly triggers Full record because training creates checkpoints/metrics and a reproducible experiment identity.",
+        "Correctly states runtime is not the trigger and requires exact command, cwd, and intended paths before launch."
+      ],
+      "concerns": []
+    }
+  ],
+  "overall_score": 98,
+  "by_skill": {
+    "record-experiment": {
+      "score": 99.8,
+      "scenario_count": 10
+    }
+  },
+  "document_quality": {
+    "record-experiment": {
+      "scores": {
+        "clarity": 100,
+        "explicitness": 100,
+        "concision": 98,
+        "functional_coverage": 100,
+        "non_redundancy": 98
+      },
+      "total_score": 98,
+      "word_count": 1696,
+      "word_count_limit": 1696,
+      "grader_evidence": [
+        "Grader read /xsb/hello-scholar/skills/hello-scholar/record-experiment/SKILL.md directly; observed 1696 words with clear scope, decision table, hard gate, status/conclusion enums, and forbidden cases.",
+        "The document explicitly covers Full record, Append event, No record, upstream provenance, derived reports, checkpoint inference, failed/invalid/stopped/negative runs, and INDEX update discipline.",
+        "Minor repetition across hard-gate and No-record principles remains, but every document quality dimension is at or above 98."
+      ],
+      "concerns": [
+        "Concision and non_redundancy are at the threshold because several safety-critical principles are restated."
+      ]
+    }
+  },
+  "summary": "Fresh 10-scenario subagent run passed. Every scenario dimension and every document quality dimension is >=98; R9 covers the one-row/tiny manifest patch as No record, and R10 covers evidence-producing training as Full record because of checkpoint/metrics identity rather than runtime."
+}
