@@ -28,7 +28,7 @@ EXPECTED_RETIRED_FILES = {
 def discovered_skill_names() -> set[str]:
     """Purpose: enumerate source Skill identities; Input: repository Skill packages; Output: discovered Front Matter names; Side effects: reads SKILL.md files."""
     names: set[str] = set()
-    for skill_md in (REPO_ROOT / "skills").glob("*/*/SKILL.md"):
+    for skill_md in (REPO_ROOT / "skills").glob("*/SKILL.md"):
         text = skill_md.read_text(encoding="utf-8")
         match = re.search(r"^name:\s*([^\n]+)$", text, re.MULTILINE)
         if match:
@@ -42,17 +42,6 @@ class NoSystematicDebuggingSkillTests(unittest.TestCase):
         for relative_path in EXPECTED_RETIRED_FILES:
             self.assertFalse((RETIRED_DIR / relative_path).exists())
         self.assertNotIn("systematic-debugging", discovered_skill_names())
-
-    def test_agents_keeps_root_cause_debugging_contract(self) -> None:
-        agents = (REPO_ROOT / "AGENTS.md").read_text(encoding="utf-8")
-        for phrase in (
-            "Read the complete error, stack trace, logs, relevant inputs, and current runtime environment",
-            "When reproduction is possible, obtain a stable failure signal before changing code.",
-            "Find the source of the abnormal state",
-            "then validate the repaired behavior.",
-        ):
-            self.assertIn(phrase, agents)
-
 
 if __name__ == "__main__":
     unittest.main()

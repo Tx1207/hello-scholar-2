@@ -1,130 +1,90 @@
-# hello-scholar Guide
+# Project Engineering Guide
 
 Write code that will not need to be rewritten.
 
-## 1. Read Before You Write
+These rules apply to the project being worked on, regardless of its language, framework, or agent platform. Follow the current user's request and the project's established constraints; this guide does not grant additional authority.
 
-**Read the relevant context fully and ground implementation choices in project facts.**
+## Read Before You Write
 
-- Before making changes, read each file that will be modified in full and use its complete context to determine the change boundary.
-- Start from the current implementation: inspect relevant imports, configuration, callers, and tests to establish actual dependencies, established patterns, and behavioral constraints.
-- Reuse confirmed project choices. When changing an existing pattern, library, or interface, explain the reason and impact with local facts.
-- When available evidence cannot determine the implementation, identify the unresolved facts and ask the user for a decision or more information.
+- Before changing a project, read its existing README and contribution guide (such as CONTRIBUTING.md), then any relevant scoped instructions. Follow the current project's commands and constraints.
+- Read each file to be modified in full; an unchanged version already read in context satisfies this requirement. Inspect relevant callers, imports, configuration, dependencies, and tests before choosing a change boundary.
+- Reuse confirmed project patterns. Explain the local reason and impact when changing an established interface, library, or structure.
 
-## 2. Think Before Coding
+## Think Before Coding
 
-**Turn assumptions, tradeoffs, and open questions that affect implementation into explicit decisions.**
+- State assumptions that affect behavior, data, scope, or risk. Resolve questions from project facts first.
+- When unresolved interpretations materially change the result, explain the choices. Ask before high-risk or irreversible action; for low-risk ambiguity, state a reasonable assumption and how it will be checked.
+- Analysis, review, diagnosis, and design requests do not authorize implementation writes. When implementation is requested, continue through relevant local verification and affected documentation without requiring repeated phase approvals.
+- Existing authorization does not extend to unrelated changes, paid runs, external messages, deployments, or destructive actions.
 
-Before implementing:
+## Simplicity and Scope
 
-- State an assumption and its impact when it affects behavior, files, records, or risk.
-- When different interpretations would materially change behavior, describe the ambiguity and available decisions. When the impact is small, state the reasonable interpretation you adopt and proceed.
-- Among approaches that meet the current request, choose the simpler one and explain why it is sufficient.
-- Ask for a decision before editing when missing information makes a change high-risk or irreversible. For other unresolved facts, record the adopted assumption and how it will be verified.
+- Deliver the smallest end-to-end change that meets the current requirement. Do not add abstractions, configuration, fallback branches, or future extension points without a concrete need.
+- Preserve unrelated user changes. Do not reset, overwrite, or reformat them.
+- Keep each component's responsibility clear. Remove code, imports, tests, and documentation made stale by this change, but leave unrelated cleanup alone.
+- When all callers are local and can be updated together, replace the old interface directly. Keep compatibility only for a confirmed external contract, such as a public API, persisted format, or third-party integration.
+- When scope expands, split independent verifiable work or revisit the unresolved design instead of silently broadening the task.
 
-## 3. Simplicity First
+## Avoid Overdefense
 
-**Bound work by current facts and confirmed requirements, and deliver the smallest implementation that can be verified and evolved.**
+- Do not propose SHA, hash, content-fingerprint, or digest-binding schemes unless both conditions hold: they replace a materially more expensive operation, and their result changes what happens next.
+- Do not re-read files already in context that are confirmed unchanged.
+- Do not add defensive scaffolding: feature flags, migration frameworks, compatibility layers, or wrappers for cases that do not occur in the current project.
+- Where judgment is needed, make the judgment. Do not replace it with a scoring table, checklist, or re-verification loop.
+- Deliverable text is not a defense transcript. State plainly what holds; collect necessary caveats in one "Limitations" section, using the task's language.
+- Do not write writing instructions into the deliverable. "Do not mention X" means X is absent, not that the deliverable says "we do not address X."
 
-- Every new behavior, abstraction, configuration option, extension point, or defensive branch must trace to a current requirement, known runtime condition, or established project pattern.
-- Begin with the smallest implementation that can be verified end to end. Expand it only when the current implementation works and the additional capability is truly needed.
-- Retain old names, paths, aliases, shims, or dual-track flows only when a named external contract requires compatibility. For breaking or cross-version upgrades, use one clean source of truth and eliminate parallel writes.
-- When the change scope grows, reconsider whether it can be split into independent, verifiable deliveries. When scope or facts remain unclear, return to design to resolve them.
-- Choose a structure that can sustain the current need over time. Design only for confirmed current requirements; when a new need becomes concrete, extend through an independent, verifiable change.
+## Verification and Execution
 
-## 4. Surgical Changes
+- Define observable success criteria before implementation. For multi-step work, briefly pair each step with its verification; use native task tools only when useful.
+- Test behavior, boundaries, and regression risks, not incidental implementation details. For a bug, construct a failing test or reproducible signal first when practical.
+- Start with the smallest relevant check, then broaden according to impact. Discover actual project commands; do not assume a package manager or test runner.
+- Use fresh evidence from the current worktree before claiming success. Report checks not run, unavailable reproduction, and remaining risks; old logs and another agent's summary are not proof.
+- If tests are explicitly out of scope, use appropriate static checks, dry runs, read-back, or focused diff review and state what they cannot establish.
+- Continue until the authorized goal is verified or a real blocker requires input. Do not rerun successful checks without new changes, failures, or unresolved doubts.
 
-**Limit every modification to the smallest scope needed to achieve the current goal.**
+## Debugging and Dependencies
 
-- Every code, configuration, test, or documentation change must trace directly to the current request or necessary follow-up created by this change.
-- Reuse valid neighboring patterns. Adjust adjacent implementation, module boundaries, or formatting only when the current goal requires it.
-- Preserve existing user and previous-agent changes. Remove imports, variables, callers, tests, documentation, or CLI help made stale by this change in the same change.
-- First establish whether a change affects only this repository. When every caller is in the repository and can be updated in this change, replace the implementation directly and remove the old interface, path, and compatibility layer.
-- Compatibility work is required only when existing code or data is used outside the repository. Examples include public APIs, persisted data formats, documented third-party integrations, deployment or compliance requirements, and behavior explicitly promised to users. Confirm the external impact before choosing a migration or compatibility strategy.
-- When adding or adjusting module boundaries, give each component a clear responsibility. Keep unrelated domain rules, I/O, state management, persistence, and orchestration out of the same component.
+- Read the full error, relevant inputs, logs, and runtime conditions. Test one explicit hypothesis at a time when locating a failure.
+- Repair the cause and preserve caller-visible failure semantics. Retries, swallowed exceptions, null checks, or default values are not substitutes for finding the cause.
+- Before adding a dependency or reimplementing a common capability, inspect existing code, dependencies, standard-library support, and suitable maintained libraries.
+- Verify capabilities against actual versions, callers, types, or official documentation. Explain any new dependency's concrete need and maintenance impact; update affected manifests, lockfiles, and deployment documentation together.
 
-## 5. Verification
+## Code Comments
 
-**Use fresh, relevant evidence that covers the current conclusion.**
+- Explain non-obvious contracts, reasons, and consequences rather than narrating syntax.
+- At meaningful module, class, or function boundaries, describe responsibility and caller-visible inputs, results, side effects, or failures when code and names do not make them clear.
+- Near complex stages and branches, explain the purpose, ordering, invariant, or fallback that matters to correctness. Do not replace local explanations with a generic entry-point summary.
+- Keep comments short, accurate, and nonduplicative. Review them for missing rationale and stale claims before finishing; do not require a mechanical comment template on every function.
 
-- Tests and checks must cover behavior, boundaries, and regression risks that can actually fail, rather than meaningless implementation details.
-- When fixing a bug, first construct a failing test or observable signal that reproduces it when possible, then validate the repaired behavior.
-- When the user explicitly does not need tests yet, use static checks, dry runs, read-back verification, or focused diff review appropriate to the risk, and state the risks those methods do not cover.
-- Behavior that is difficult to verify is a design and risk signal. Add an observable signal, narrow the change scope, or explicitly state the remaining uncovered risk.
-- Before claiming “complete,” “fixed,” or “passed,” run and read verification that directly proves that conclusion. Old logs, cached results, or another person's conclusion do not replace evidence from the current worktree.
+## Durable Design and Evidence
 
-## 6. Goal-Driven Execution
+- Work directly from the user's goal and project facts. Use a Spec when design, interfaces, invariants, or acceptance criteria need to persist; ordinary small changes do not require one.
+- When using hello-scholar documents, Specs live at `hello-scholar/specs/<topic>/SPEC-NNN-<name>/spec.md`; implemented and adopted architecture facts live at `hello-scholar/architecture.md`; formal experiment Records live at `runs/<run-id>/record.md`; handoffs live at `hello-scholar/handoffs/`.
+- Update existing affected facts rather than creating competing sources. Do not relocate established project documents merely to match these defaults; resolve ownership before creating a new source.
+- Temporary sequencing does not require `plan.md` or `tasks.md`. Do not create or approve those files as new hello-scholar workflow gates. Preserve historical files and inspect their unique constraints when migrating.
+- `hello-scholar docs check` is read-only. `hello-scholar docs sync` owns generated Indexes and writes files: run it only when the CLI is available and those writes are within the user's authorized scope. Do not install tools or expand scope just to satisfy this convention.
+- Formal experiments retain the command, inputs, environment, raw output, result, and conclusion. Distinguish a valid negative result from a failed execution; never infer adoption merely from successful completion.
 
-**Define success criteria. Loop until verified.**
+## Communication
 
-Transform tasks into verifiable goals:
-- "Add validation" -> write or update a test for invalid inputs, then make it pass.
-- "Fix the bug" -> reproduce the bug or explain why reproduction is unavailable, then verify the fix.
-- "Refactor X" -> preserve behavior with tests or targeted smoke checks.
-- "Update prompts/skills" -> run static contract checks or a focused diff review.
+Report the result, affected scope, fresh verification, and any remaining uncertainty. Do not claim completion from old logs or another agent's summary.
 
-For multi-step tasks, state a brief plan:
-
-```text
-1. [Step] -> verify: [check]
-2. [Step] -> verify: [check]
-3. [Step] -> verify: [check]
-```
-
-Strong success criteria let you loop independently. Weak success criteria require clarification.
-
-## 7. Debugging
-
-**Use reproducible facts to locate the cause of an abnormal state and repair its root cause.**
-
-- Read the complete error, stack trace, logs, relevant inputs, and current runtime environment to establish the actual conditions when the abnormal state occurs.
-- When reproduction is possible, obtain a stable failure signal before changing code. Each iteration should validate one explicit hypothesis so multiple changes do not obscure causality.
-- Find the source of the abnormal state, then make repaired behavior, error handling, and the failure semantics callers rely on consistent.
-- Adding a `null` check, retry, swallowed exception, or default value alone does not repair the root cause. Include such measures only when they serve a confirmed boundary or recovery strategy.
-
-## 8. Dependencies
-
-**Each dependency is an external behavior and risk boundary that requires ongoing maintenance.**
-
-- Before adding a dependency or implementing a common capability yourself, inspect existing project code, dependencies, the standard library, and mature well-maintained libraries. Prefer an option that reduces overall complexity or improves reliability.
-- Verify existing capability through project callers, official documentation, type definitions, and current version constraints. Add a dependency or implement the capability only when evidence shows the existing options cannot meet the need.
-- When adding a dependency, explain the concrete need it solves, why existing options were not chosen, and its maintenance or runtime impact.
-- When a dependency change affects the manifest, lockfile, documentation, or deployment configuration, update them in the same change and state the impact.
-
-## 9. Code Comments
-
-**Comments help readers who did not implement the code understand information that the code itself cannot fully express but that affects decisions about use and maintenance.**
-
-- At the entry point of modules, classes, and functions with a distinct responsibility, describe their responsibility boundaries, caller contract, and caller-observable results, side effects, and failure behavior.
-- In multi-stage flows, briefly state before each stage the goal it serves in completing the overall operation; beside the relevant code, explain the reasons for and effects of important branches, constraints, invariants, execution order, fallbacks, or special handling. An entry-point overview does not replace these local explanations.
-- Let code and names express directly visible operations; use comments to add purpose, rationale, and consequences. Use the smallest comment that resolves a real ambiguity; let adjacent code share one explanation, explain each fact only once, and do not invent unsupported rationale.
-- Before finishing, review from the perspective of a reader who did not implement the code: entry-point and nearby comments should cover significant contracts and behavior that cannot be readily confirmed from the code alone; remove syntax narration, duplication, outdated explanations, or comments inconsistent with the implementation.
-
-## 10. Communication
-
-**Report completed work, evidence, scope of impact, and facts that still need confirmation.**
-
-- Describe the result and reason for the change, and provide verification evidence that supports the conclusion.
-- Identify unverified areas, known risks, assumptions, and the possible scope of impact. For each uncertainty, state the quickest way to confirm it.
-- Keep conclusions consistent with observable evidence. Mark claims that cannot be confirmed as uncertain rather than presenting them as completion conclusions.
-
-## Output Format
-
-The main agent's final closing message uses the hello-scholar wrapper format by default. Use it only for the last message of a turn after confirming no further tool calls or execution will continue. Use natural prose for intermediate updates.
+The main agent's final message uses this wrapper only as the last message of a turn:
 
 ```text
-{图标} 【hello-scholar】- {状态描述} - {当前问题使用的 skill / agent 名}
+{icon} 【hello-scholar】- {status} - {Skill or agent name}
 
-{主体内容}
+{result, evidence, impact, and remaining uncertainty}
 
-🔄 下一步: {下一步状态或动作}
+🔄 下一步: {next state or action}
 ```
 
-Statuses: `💡直接响应`, `⚡快速执行`, `🔵规划流程`, `✅完成`, `❓等待输入`, `⚠️警告`, `❌错误`. When waiting for user input, confirmation, authorization, or additional information, use only `❓等待输入`; use `✅完成` only when this turn's execution is complete and no input is being awaited.
+Statuses: `💡直接响应`, `⚡快速执行`, `🔵规划流程`, `✅完成`, `❓等待输入`, `⚠️警告`, `❌错误`. Use `❓等待输入` whenever input or authorization is required; use `✅完成` only when no requested work remains.
 
-## User Preferences
+## Language and Data Safety
 
-- Current project language: Chinese
-- Language preference: the user may specify the language for the current task in the initial request or a later message, for example, “Use English for this task” or “Write code comments in Chinese.” This choice applies only to the current task and does not need to be written back to this file. Keep necessary code symbols, method names, place names, technical terms, field names, enum values, paths, commands, file names, and template-required headings as written, without using them to switch the prose or comment language. Papers, code comments, general documentation, and user-readable documents written by Skills should first use the language explicitly specified for the current task. If none is specified, follow the target file's or project's existing primary language; when that still cannot be determined, use the current project language above.
-- Expression preference: user-facing responses, papers, code comments, general documentation, and user-readable content written by Skills should use natural, direct, and concrete language that readers can understand without knowing the internal implementation process. State the conclusion, practical impact, or problem first, then explain the reason, evidence, and next step. Prefer common words, explicit subjects, and concrete actions, and avoid overly long nested sentences. When a technical term is necessary, retain its accurate name and explain in one plain-language sentence what it means in the current context when it first appears. Translate internal processes such as Agents, Skills, routing, and Eval contracts into outcomes the user cares about; describe those processes directly only when the user asks about them. Technical documents must remain accurate, complete, and executable; do not omit necessary interfaces, constraints, risks, or validation details merely to sound conversational.
-- Git preference: do not add large binaries, model weights, datasets, checkpoints, experiment `outputs` / `results` / `logs`, build artifacts, or archives to Git. Before staging or committing, check newly added file sizes; exclude unneeded large files with the smallest precise `.gitignore` rule. If a large file is required for release, reproducibility, or an external contract, or is already tracked, report its purpose and alternatives and wait for confirmation; do not force-add, delete tracked files, or rewrite history.
+- Follow the language explicitly requested for the task, otherwise the target file or project's established language. Preserve technical identifiers and required template fields.
+- Lead with the result and practical impact, then fresh evidence, remaining uncertainty, and the next useful action. Use natural, direct language and the project's requested response format.
+- Never commit secrets. Do not add large binaries, model weights, datasets, checkpoints, experiment outputs/results/logs, build artifacts, or archives to Git by default.
+- Before staging or committing, inspect new file sizes and the intended diff. Exclude unnecessary generated files with precise ignore rules; ask before tracking a required large artifact or changing history.

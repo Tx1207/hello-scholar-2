@@ -1,8 +1,12 @@
 const readline = require("node:readline/promises");
 const { stdin: defaultStdin, stdout: defaultStdout } = require("node:process");
 const { checkDocs, syncDocs } = require("./docs");
-const { beginMarker, endMarker } = require("./instruction-blocks");
-const { hasExistingInstructionBlock, install, uninstall } = require("./install");
+const {
+  InstallConflictError,
+  inspectInstall,
+  install,
+  uninstall,
+} = require("./install");
 const { resolveProjectRoot } = require("./project-root");
 
 function usageText() {
@@ -76,19 +80,6 @@ function formatSummary(summary) {
   return `${summary.action} ${summary.tool}: ${parts.join(", ")}`;
 }
 
-function reinstallWarning(tool) {
-  // Purpose: explain the managed block that reinstall will replace; Input: tool name; Output: confirmation warning text.
-  return [
-    `hello-scholar is already installed for ${tool}.`,
-    "Reinstalling will replace the content inside:",
-    beginMarker(tool),
-    "...",
-    endMarker(tool),
-    "",
-    "Back up any manual edits inside that block before continuing.",
-  ].join("\n");
-}
-
 function compareStrings(left, right) {
   // Purpose: provide deterministic lexical ordering; Input: two strings; Output: negative, zero, or positive comparison result.
   if (left < right) {
@@ -148,9 +139,16 @@ function writeDocsResult(command, result, stdout) {
   }
 }
 
-async function confirmReinstall(tool, stdin, stdout) {
-  // Purpose: obtain explicit reinstall confirmation; Input: tool and streams; Output: true only for exact yes; Side effects: reads stdin and writes prompt.
-  stdout.write(`${reinstallWarning(tool)}\n`);
+function writeInstallConflicts(conflicts, stdout) {
+  // Purpose: print the complete deterministic preflight conflict set before any mutation; Side effects: writes to stdout.
+  for (const conflict of [...conflicts].sort((left, right) => compareStrings(left.path, right.path))) {
+    stdout.write(`conflict ${conflict.code} ${conflict.path}: ${conflict.message}\n`);
+  }
+}
+
+async function confirmConflicts(conflicts, stdin, stdout) {
+  // Purpose: obtain one explicit approval for the exact managed targets already listed; Output: true only for exact yes.
+  stdout.write(`The ${conflicts.length} managed target${conflicts.length === 1 ? "" : "s"} listed above will be replaced.\n`);
   const rl = readline.createInterface({ input: stdin, output: stdout });
   try {
     const answer = await rl.question('Type "yes" to continue: ');
@@ -186,19 +184,38 @@ async function main(args, options = {}) {
     return;
   }
 
-  if (
-    command.action === "install" &&
-    hasExistingInstructionBlock(projectRoot, command.tool) &&
-    !(await confirmReinstall(command.tool, stdin, stdout))
-  ) {
-    stdout.write(`install ${command.tool} cancelled\n`);
-    return;
+  let summary;
+  if (command.action === "install") {
+    const plan = inspectInstall({
+      tool: command.tool,
+      mode: command.mode,
+      projectRoot,
+      repoRoot,
+    });
+    if (plan.conflicts.length > 0) {
+      writeInstallConflicts(plan.conflicts, stdout);
+      const unowned = plan.conflicts.filter((conflict) => !conflict.approvable);
+      if (unowned.length > 0) {
+        throw new InstallConflictError(plan.conflicts);
+      }
+      if (!(await confirmConflicts(plan.conflicts, stdin, stdout))) {
+        stdout.write(`install ${command.tool} cancelled\n`);
+        return;
+      }
+    }
+    summary = install({
+      tool: command.tool,
+      mode: command.mode,
+      projectRoot,
+      repoRoot,
+      approvedConflicts: plan.conflicts.map((conflict) => ({
+        targetPath: conflict.targetPath,
+        digest: conflict.digest,
+      })),
+    });
+  } else {
+    summary = uninstall({ tool: command.tool, projectRoot, repoRoot });
   }
-
-  const summary =
-    command.action === "install"
-      ? install({ tool: command.tool, mode: command.mode, projectRoot, repoRoot })
-      : uninstall({ tool: command.tool, projectRoot, repoRoot });
   stdout.write(`${formatSummary(summary)}\n`);
 }
 

@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Quality gate for 10 real subagent scenarios covering record-experiment."""
+"""核对已归档的十场景协议与评分；不评价当前 record-experiment 技能。
+
+分数、篇幅与子 Agent 断言只保留旧协议的历史含义。当前行为收益使用
+quality-cases 下的真实对照，不能从本文件通过推断。
+"""
 
 from pathlib import Path
 import json
@@ -20,7 +24,7 @@ PROTOCOL_PATH = (
     / "record_experiment_10_scenario_protocol.json"
 )
 REQUIRED_SCENARIO_COUNT = 10
-PASS_THRESHOLD = 98
+ARCHIVED_PASS_THRESHOLD = 98
 REQUIRED_ANSWER_DIMENSIONS = {
     "trigger_decision",
     "record_granularity",
@@ -49,33 +53,31 @@ REQUIRED_SCENARIOS = {
 }
 
 
-class RecordExperimentTenScenarioQualityGateTests(unittest.TestCase):
+class RecordExperimentTenScenarioHistoricalEvidenceTests(unittest.TestCase):
     def load_report(self) -> dict:
         self.assertTrue(
             REPORT_PATH.exists(),
-            "Missing record-experiment 10-scenario scorecard. Run fresh "
-            "subagent scenarios, score them with a subagent grader, and save "
-            "the report.",
+            "Missing archived record-experiment scorecard. Restore its original "
+            "evidence; do not replace it with new model results.",
         )
         return json.loads(REPORT_PATH.read_text(encoding="utf-8"))
 
     def load_protocol(self) -> dict:
         self.assertTrue(
             PROTOCOL_PATH.exists(),
-            "Missing reusable record-experiment 10-scenario protocol. The "
-            "subagent flow, scoring dimensions, rerun rules, and scenario "
-            "prompts must live under test/fixtures.",
+            "Missing archived record-experiment protocol. Restore the original "
+            "protocol that belongs to the archived scorecard.",
         )
         return json.loads(PROTOCOL_PATH.read_text(encoding="utf-8"))
 
-    def test_reusable_protocol_records_the_subagent_test_flow(self) -> None:
+    def test_archived_protocol_preserves_its_original_test_flow(self) -> None:
         protocol = self.load_protocol()
 
         self.assertEqual(1, protocol["protocol_version"])
         self.assertEqual(["record-experiment"], protocol["target_skills"])
 
         quality_gate = protocol["quality_gate"]
-        self.assertEqual(PASS_THRESHOLD, quality_gate["pass_threshold"])
+        self.assertEqual(ARCHIVED_PASS_THRESHOLD, quality_gate["pass_threshold"])
         self.assertEqual(REQUIRED_SCENARIO_COUNT, quality_gate["scenario_count"])
         self.assertEqual(
             sorted(REQUIRED_ANSWER_DIMENSIONS),
@@ -112,7 +114,7 @@ class RecordExperimentTenScenarioQualityGateTests(unittest.TestCase):
             )
             self.assertGreater(len(scenario["grader_focus"]), 80)
 
-    def test_scorecard_is_a_run_of_the_reusable_protocol(self) -> None:
+    def test_archived_scorecard_is_bound_to_its_protocol(self) -> None:
         report = self.load_report()
         protocol = self.load_protocol()
 
@@ -139,11 +141,11 @@ class RecordExperimentTenScenarioQualityGateTests(unittest.TestCase):
             self.assertEqual(blueprint["prompt"], scenario["prompt"])
             self.assertEqual(blueprint["pressure_tags"], scenario["pressure_tags"])
 
-    def test_report_has_ten_complex_subagent_scenarios(self) -> None:
+    def test_archived_report_preserves_its_ten_scenarios(self) -> None:
         report = self.load_report()
 
         self.assertEqual(1, report["report_version"])
-        self.assertEqual(PASS_THRESHOLD, report["pass_threshold"])
+        self.assertEqual(ARCHIVED_PASS_THRESHOLD, report["pass_threshold"])
         self.assertIn("spawn_agent", report["created_with"])
         self.assertIn("wait_agent", report["created_with"])
         self.assertIn("subagent_grader", report["scored_by"])
@@ -159,53 +161,53 @@ class RecordExperimentTenScenarioQualityGateTests(unittest.TestCase):
             self.assertGreaterEqual(len(scenario["pressure_tags"]), 2)
             self.assertIn(scenario["decision"], {"Full record", "Append event", "No record"})
 
-    def test_each_scenario_scores_at_or_above_threshold(self) -> None:
+    def test_archived_scenario_scores_match_the_original_gate(self) -> None:
         report = self.load_report()
 
         for scenario in report["scenarios"]:
             self.assertEqual(REQUIRED_ANSWER_DIMENSIONS, set(scenario["scores"]))
             self.assertGreaterEqual(
                 scenario["total_score"],
-                PASS_THRESHOLD,
+                ARCHIVED_PASS_THRESHOLD,
                 f"{scenario['scenario_id']} scored below threshold",
             )
             for score in scenario["scores"].values():
                 self.assertIn(score, range(0, 101))
                 self.assertGreaterEqual(
                     score,
-                    PASS_THRESHOLD,
+                    ARCHIVED_PASS_THRESHOLD,
                     f"{scenario['scenario_id']} has a dimension below threshold",
                 )
             self.assertGreaterEqual(len(scenario["grader_evidence"]), 2)
             self.assertTrue(scenario["hard_contract_pass"])
 
-    def test_skill_and_overall_scores_meet_threshold(self) -> None:
+    def test_archived_skill_and_overall_scores_match_the_original_gate(self) -> None:
         report = self.load_report()
 
-        self.assertGreaterEqual(report["overall_score"], PASS_THRESHOLD)
-        self.assertGreaterEqual(report["by_skill"]["record-experiment"]["score"], PASS_THRESHOLD)
+        self.assertGreaterEqual(report["overall_score"], ARCHIVED_PASS_THRESHOLD)
+        self.assertGreaterEqual(report["by_skill"]["record-experiment"]["score"], ARCHIVED_PASS_THRESHOLD)
         self.assertEqual(
             REQUIRED_SCENARIO_COUNT,
             report["by_skill"]["record-experiment"]["scenario_count"],
         )
 
-    def test_skill_document_quality_scores_meet_threshold(self) -> None:
+    def test_archived_document_scores_match_the_original_gate(self) -> None:
         report = self.load_report()
 
         doc_quality = report["document_quality"]["record-experiment"]
         self.assertEqual(REQUIRED_DOC_DIMENSIONS, set(doc_quality["scores"]))
-        self.assertGreaterEqual(doc_quality["total_score"], PASS_THRESHOLD)
+        self.assertGreaterEqual(doc_quality["total_score"], ARCHIVED_PASS_THRESHOLD)
         for dimension, score in doc_quality["scores"].items():
             self.assertGreaterEqual(
                 score,
-                PASS_THRESHOLD,
+                ARCHIVED_PASS_THRESHOLD,
                 f"record-experiment document quality dimension {dimension} is below threshold",
             )
         self.assertIn("word_count", doc_quality)
         self.assertLessEqual(
             doc_quality["word_count"],
             doc_quality["word_count_limit"],
-            "record-experiment skill doc is too long for the agreed quality gate",
+            "Archived document scorecard no longer matches its original length gate",
         )
         self.assertGreaterEqual(len(doc_quality["grader_evidence"]), 2)
 

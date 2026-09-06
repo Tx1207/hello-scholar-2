@@ -1,12 +1,11 @@
 ---
-schema: 1
+schema: 2
 kind: record
 run_id: <run-id>
 title: <用户可读标题>
 status: planned
 spec: null
 spec_revision: null
-plan_revision: null
 started: null
 completed: null
 decision: pending

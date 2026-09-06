@@ -8,7 +8,7 @@ const { discoverDocuments } = require("../src/document-discovery");
 const { validateDocumentSet } = require("../src/document-validation");
 
 function document(relativePath, attributes, body = "# Document\n") {
-  // Purpose: build one discovered-document fixture; Input: relative path, Front Matter attributes, and optional body; Output: document object accepted by validation.
+  // Purpose: build one discovered-document fixture; Input: path, metadata, and body; Output: validation input document.
   return {
     kind: attributes.kind,
     absolutePath: `/fixture/${relativePath}`,
@@ -19,10 +19,11 @@ function document(relativePath, attributes, body = "# Document\n") {
 }
 
 function discovery(documents, overrides = {}) {
-  // Purpose: build a complete discovery-result fixture; Input: document list and optional collection overrides; Output: discovery result accepted by validation.
+  // Purpose: build a complete discovery fixture; Input: documents and collection overrides; Output: validation input inventory.
   return {
     documents,
     legacyPaths: [],
+    historicalPaths: [],
     misplacedPaths: [],
     forbiddenRunDocuments: [],
     unsafePaths: [],
@@ -32,7 +33,7 @@ function discovery(documents, overrides = {}) {
 }
 
 function specAttributes(overrides = {}) {
-  // Purpose: build valid Spec metadata; Input: optional field overrides; Output: Spec Front Matter attributes.
+  // Purpose: build valid schema 1 Spec metadata; Input: optional overrides; Output: attributes.
   return {
     schema: 1,
     kind: "spec",
@@ -51,43 +52,8 @@ function specAttributes(overrides = {}) {
   };
 }
 
-function planAttributes(overrides = {}) {
-  // Purpose: build valid Plan metadata; Input: optional field overrides; Output: Plan Front Matter attributes.
-  return {
-    schema: 1,
-    kind: "plan",
-    spec: "SPEC-001",
-    spec_revision: 3,
-    revision: 2,
-    status: "approved",
-    title: "Paged Cache Plan",
-    summary: "Implement the accepted design",
-    created: "2026-08-01",
-    updated: "2026-08-02",
-    ...overrides,
-  };
-}
-
-function tasksAttributes(overrides = {}) {
-  // Purpose: build valid Tasks metadata; Input: optional field overrides; Output: Tasks Front Matter attributes.
-  return {
-    schema: 1,
-    kind: "tasks",
-    spec: "SPEC-001",
-    spec_revision: 3,
-    plan_revision: 2,
-    revision: 4,
-    approval: "approved",
-    approved_revision: 4,
-    status: "in-progress",
-    created: "2026-08-02",
-    updated: "2026-08-03",
-    ...overrides,
-  };
-}
-
-function recordAttributes(overrides = {}) {
-  // Purpose: build valid Record metadata; Input: optional field overrides; Output: Record Front Matter attributes.
+function recordV1Attributes(overrides = {}) {
+  // Purpose: build a valid historical schema 1 Record; Input: optional overrides; Output: attributes.
   return {
     schema: 1,
     kind: "record",
@@ -105,8 +71,26 @@ function recordAttributes(overrides = {}) {
   };
 }
 
+function recordV2Attributes(overrides = {}) {
+  // Purpose: build a valid current schema 2 Record; Input: optional overrides; Output: attributes.
+  return {
+    schema: 2,
+    kind: "record",
+    run_id: "20260801-1430-paged-cache",
+    title: "Block Size Comparison",
+    status: "completed",
+    spec: "SPEC-001",
+    spec_revision: 2,
+    started: "2026-08-01T14:30:00+08:00",
+    completed: "2026-08-01T16:42:00+08:00",
+    decision: "adopt",
+    summary: "Block size 16 wins",
+    ...overrides,
+  };
+}
+
 function architectureAttributes(overrides = {}) {
-  // Purpose: build valid Architecture metadata; Input: optional field overrides; Output: Architecture Front Matter attributes.
+  // Purpose: build valid schema 1 Architecture metadata; Input: optional overrides; Output: attributes.
   return {
     schema: 1,
     kind: "architecture",
@@ -117,59 +101,22 @@ function architectureAttributes(overrides = {}) {
   };
 }
 
-function taskBlock(id, checked = false, omittedField = null) {
-  // Purpose: build one complete top-level Task block; Input: Task ID, checkbox state, and optional omitted field; Output: Markdown lines.
-  const fields = [
-    ["Spec Coverage", "AC-001"],
-    ["Depends On", "None"],
-    ["Parallel", "No"],
-    ["Files", ""],
-    ["Work", ""],
-    ["Validation", ""],
-    ["Completion", ""],
-  ].filter(([field]) => field !== omittedField);
-  const lines = [`- [${checked ? "x" : " "}] ${id}: Complete ${id}`];
-  for (const [field, value] of fields) {
-    lines.push(`  - ${field}:${value ? ` ${value}` : ""}`);
-    if (field === "Files") {
-      lines.push("    - `src/example.js`");
-    } else if (field === "Work") {
-      lines.push("    1. Make the focused change.");
-    } else if (field === "Validation") {
-      lines.push("    - Run `node --test`; expect a passing result.");
-    } else if (field === "Completion") {
-      lines.push("    - The observable repository state is complete.");
-    }
-  }
-  return lines;
-}
-
 const bundle = "hello-scholar/specs/kv-cache/SPEC-001-paged-cache";
 
 function errorCodes(result) {
-  // Purpose: compare validation errors by stable code; Input: validation result; Output: set of error codes.
+  // Purpose: compare validation errors by stable code; Input: validation result; Output: set of codes.
   return new Set(result.errors.map((diagnostic) => diagnostic.code));
 }
 
 function noticeCodes(result) {
-  // Purpose: compare validation notices by stable code; Input: validation result; Output: set of notice codes.
+  // Purpose: compare validation notices by stable code; Input: validation result; Output: set of codes.
   return new Set(result.notices.map((diagnostic) => diagnostic.code));
 }
 
-test("validates a complete current bundle and computes top-level task completion", () => {
+test("accepts a Spec-only project without Plan or Tasks diagnostics", () => {
   const input = discovery([
-    document(`${bundle}/tasks.md`, tasksAttributes(), [
-      "# Tasks",
-      "",
-      ...taskBlock("T001", true),
-      "  - [ ] T999: Nested checklist is not a task",
-      ...taskBlock("T002"),
-      "",
-    ].join("\n")),
-    document("runs/20260801-1430-paged-cache/record.md", recordAttributes()),
-    document(`${bundle}/plan.md`, planAttributes()),
-    document("hello-scholar/architecture.md", architectureAttributes()),
     document(`${bundle}/spec.md`, specAttributes()),
+    document("hello-scholar/architecture.md", architectureAttributes()),
   ]);
   const before = structuredClone(input);
 
@@ -179,252 +126,73 @@ test("validates a complete current bundle and computes top-level task completion
   assert.deepEqual(result.notices, []);
   assert.equal(result.specs.length, 1);
   assert.equal(result.specs[0].id, "SPEC-001");
-  assert.equal(result.specs[0].planState, "Current");
-  assert.equal(result.specs[0].tasksState, "Current");
-  assert.deepEqual(result.specs[0].completion, { completed: 1, total: 2, percent: 50 });
-  assert.equal(result.specs[0].approvalState, "approved");
-  assert.equal(result.specs[0].tasksStatus, "in-progress");
-  assert.equal(result.records[0].runId, "20260801-1430-paged-cache");
+  for (const obsoleteField of [
+    "plan", "tasks", "planState", "tasksState", "completion", "approvalState", "tasksStatus",
+  ]) {
+    assert.equal(Object.hasOwn(result.specs[0], obsoleteField), false);
+  }
   assert.equal(result.architecture.relativePath, "hello-scholar/architecture.md");
   assert.deepEqual(input, before, "validation must not mutate discovery results");
 });
 
-test("requires each top-level Task to contain every template field", () => {
-  const validDocuments = [
-    document(`${bundle}/spec.md`, specAttributes()),
-    document(`${bundle}/plan.md`, planAttributes()),
-    document("hello-scholar/architecture.md", architectureAttributes()),
-  ];
-  const valid = validateDocumentSet(discovery([
-    ...validDocuments,
-    document(`${bundle}/tasks.md`, tasksAttributes(), [
-      "# Tasks",
-      "",
-      ...taskBlock("T001"),
-      "  - [ ] T999: Nested checklist is not a task",
-      ...taskBlock("T002", true),
-      "",
-    ].join("\n")),
-  ]));
-  assert.deepEqual(valid.errors, []);
-
-  const missingSecondField = validateDocumentSet(discovery([
-    ...validDocuments,
-    document(`${bundle}/tasks.md`, tasksAttributes(), [
-      ...taskBlock("T001"),
-      ...taskBlock("T002", false, "Validation"),
-      "",
-    ].join("\n")),
-  ]));
-
-  assert.deepEqual(missingSecondField.errors, [
-    {
-      code: "missing-task-field",
-      path: `${bundle}/tasks.md`,
-      message: "Task T002 requires field Validation",
-    },
-  ]);
-});
-
-test("requires canonical checkbox Task blocks and rejects heading or short-ID substitutes", () => {
-  const supportingDocuments = [
-    document(`${bundle}/spec.md`, specAttributes()),
-    document(`${bundle}/plan.md`, planAttributes()),
-    document("hello-scholar/architecture.md", architectureAttributes()),
-  ];
-
-  const headingSubstitute = validateDocumentSet(discovery([
-    ...supportingDocuments,
-    document(`${bundle}/tasks.md`, tasksAttributes(), [
-      "# Tasks",
-      "",
-      "## Phase 1",
-      "",
-      "## Task Map",
-      "",
-      "| ID | Task |",
-      "| --- | --- |",
-      "| T1 | Prepare the migration |",
-      "",
-      "## T1 — Prepare the migration",
-      "- [ ] **Status:** Not started",
-      "- **Spec Coverage:** AC-001",
-      "",
-    ].join("\n")),
-  ]));
-  assert.deepEqual(headingSubstitute.errors, [
-    {
-      code: "invalid-task-id",
-      path: `${bundle}/tasks.md`,
-      message: "Task ID T1 must match T[0-9]{3,}",
-    },
-    {
-      code: "noncanonical-task-block",
-      path: `${bundle}/tasks.md`,
-      message: "Task T1 must use - [ ] TNNN: <plain-language goal>, not a heading",
-    },
-  ]);
-
-  const longHeadingSubstitute = validateDocumentSet(discovery([
-    ...supportingDocuments,
-    document(`${bundle}/tasks.md`, tasksAttributes(), "## T001 — A titled Task\n"),
-  ]));
-  assert.deepEqual(longHeadingSubstitute.errors, [
-    {
-      code: "noncanonical-task-block",
-      path: `${bundle}/tasks.md`,
-      message: "Task T001 must use - [ ] TNNN: <plain-language goal>, not a heading",
-    },
-  ]);
-
-  const shortCheckbox = validateDocumentSet(discovery([
-    ...supportingDocuments,
-    document(`${bundle}/tasks.md`, tasksAttributes(), "- [ ] T01: Short identifier\n"),
-  ]));
-  assert.deepEqual(shortCheckbox.errors, [
-    {
-      code: "invalid-task-id",
-      path: `${bundle}/tasks.md`,
-      message: "Task ID T01 must match T[0-9]{3,}",
-    },
-  ]);
-
-  const taskless = validateDocumentSet(discovery([
-    ...supportingDocuments,
-    document(`${bundle}/tasks.md`, tasksAttributes(), "# Tasks\n\n## Phase 1\n"),
-  ]));
-  assert.deepEqual(taskless.errors, [
-    {
-      code: "missing-canonical-tasks",
-      path: `${bundle}/tasks.md`,
-      message: "Tasks requires at least one top-level - [ ] TNNN: <plain-language goal> block",
-    },
-  ]);
-
-  const canonical = validateDocumentSet(discovery([
-    ...supportingDocuments,
-    document(`${bundle}/tasks.md`, tasksAttributes(), [
-      "# Tasks",
-      "",
-      ...taskBlock("T001", true),
-      ...taskBlock("T002"),
-      "",
-    ].join("\n")),
-  ]));
-  assert.deepEqual(canonical.errors, []);
-  assert.deepEqual(canonical.specs[0].completion, { completed: 1, total: 2, percent: 50 });
-});
-
-test("does not count task-shaped examples in fenced code or HTML comments", () => {
+test("reports historical Plan and Tasks as notices without parsing them as core documents", () => {
   const result = validateDocumentSet(discovery([
     document(`${bundle}/spec.md`, specAttributes()),
-    document(`${bundle}/plan.md`, planAttributes()),
-    document(`${bundle}/tasks.md`, tasksAttributes({ status: "completed" }), [
-      "# Tasks",
-      "",
-      "```markdown",
-      "- [x] T001: Example only",
-      "```",
-      "",
-      "<!--",
-      "- [x] T002: Hidden historical task",
-      "-->",
-      "",
-    ].join("\n")),
     document("hello-scholar/architecture.md", architectureAttributes()),
-  ]));
+  ], {
+    historicalPaths: [`${bundle}/tasks.md`, `${bundle}/plan.md`],
+  }));
 
-  assert.deepEqual(result.specs[0].completion, { completed: 0, total: 0, percent: 0 });
-  assert.ok(errorCodes(result).has("empty-tasks-marked-completed"));
+  assert.deepEqual(result.errors, []);
+  assert.deepEqual(result.notices, [
+    {
+      code: "historical-document",
+      path: `${bundle}/plan.md`,
+      message: "historical Plan is not part of the current document model",
+    },
+    {
+      code: "historical-document",
+      path: `${bundle}/tasks.md`,
+      message: "historical Tasks is not part of the current document model",
+    },
+  ]);
 });
 
-test("derives Missing and Stale as notices without turning them into errors", () => {
-  const missing = validateDocumentSet(discovery([
-    document(`${bundle}/spec.md`, specAttributes()),
-  ]));
-
-  assert.deepEqual(missing.errors, []);
-  assert.equal(missing.specs[0].planState, "Missing");
-  assert.equal(missing.specs[0].tasksState, "Missing");
-  assert.equal(missing.specs[0].completion, null);
-  assert.deepEqual(noticeCodes(missing), new Set([
-    "architecture-missing",
-    "plan-missing",
-    "tasks-missing",
-  ]));
-
-  const stale = validateDocumentSet(discovery([
-    document(`${bundle}/spec.md`, specAttributes()),
-    document(`${bundle}/plan.md`, planAttributes({ spec_revision: 2 })),
-    document(
-      `${bundle}/tasks.md`,
-      tasksAttributes({ plan_revision: 1 }),
-      [...taskBlock("T001"), ""].join("\n")
-    ),
-    document("hello-scholar/architecture.md", architectureAttributes()),
-  ]));
-
-  assert.deepEqual(stale.errors, []);
-  assert.equal(stale.specs[0].planState, "Stale");
-  assert.equal(stale.specs[0].tasksState, "Stale");
-  assert.deepEqual(noticeCodes(stale), new Set(["plan-stale", "tasks-stale"]));
-});
-
-test("checks every document kind for required fields and fixed scalar types", () => {
-  const cases = [
-    [`${bundle}/spec.md`, specAttributes(), "title"],
-    [`${bundle}/plan.md`, planAttributes(), "summary"],
-    [`${bundle}/tasks.md`, tasksAttributes(), "approval"],
-    ["runs/20260801-1430-paged-cache/record.md", recordAttributes(), "decision"],
-    ["hello-scholar/architecture.md", architectureAttributes(), "applies_to"],
-  ];
-
-  for (const [relativePath, attributes, field] of cases) {
-    delete attributes[field];
-    const result = validateDocumentSet(discovery([document(relativePath, attributes)]));
-    assert.ok(
-      result.errors.some((diagnostic) =>
-        diagnostic.code === "missing-field" && diagnostic.message.includes(field)
-      ),
-      `${relativePath} should require ${field}`
-    );
-  }
-
+test("checks required fields, supported schemas, and fixed scalar types", () => {
+  const missingSpec = specAttributes();
+  delete missingSpec.title;
+  const missingV1Record = recordV1Attributes();
+  delete missingV1Record.plan_revision;
+  const missingV2Record = recordV2Attributes();
+  delete missingV2Record.summary;
   const result = validateDocumentSet(discovery([
-    document(`${bundle}/spec.md`, specAttributes({
-      schema: "1",
-      revision: 0,
-      type: "idea",
-      created: "2026-02-30",
-    })),
-    document(`${bundle}/plan.md`, planAttributes({ status: "ready", updated: "08/02/2026" })),
-    document(`${bundle}/tasks.md`, tasksAttributes({ revision: true })),
+    document(`${bundle}/spec.md`, missingSpec),
+    document("runs/v1/record.md", { ...missingV1Record, run_id: "v1" }),
+    document("runs/v2/record.md", { ...missingV2Record, run_id: "v2" }),
     document("hello-scholar/architecture.md", architectureAttributes({ status: "draft" })),
   ]));
-  const codes = errorCodes(result);
-  for (const code of ["invalid-schema", "invalid-positive-integer", "invalid-enum", "invalid-date"]) {
-    assert.ok(codes.has(code), `expected ${code}`);
-  }
+
+  assert.ok(result.errors.some((error) => error.code === "missing-field" && error.message.includes("title")));
+  assert.ok(result.errors.some((error) => error.code === "missing-field" && error.message.includes("plan_revision")));
+  assert.ok(result.errors.some((error) => error.code === "missing-field" && error.message.includes("summary")));
+  assert.ok(errorCodes(result).has("invalid-enum"));
+
+  const schemas = validateDocumentSet(discovery([
+    document(`${bundle}/spec.md`, specAttributes({ schema: 2 })),
+    document("hello-scholar/architecture.md", architectureAttributes({ schema: 2 })),
+    document("runs/unsupported/record.md", recordV2Attributes({ schema: 3, run_id: "unsupported" })),
+    document("runs/obsolete/record.md", recordV2Attributes({ run_id: "obsolete", plan_revision: 1 })),
+  ]));
+  assert.ok(schemas.errors.filter((error) => error.code === "invalid-schema").length >= 3);
+  assert.ok(errorCodes(schemas).has("unexpected-record-field"));
 });
 
 test("checks path identity, globally unique Spec IDs, and three-or-more digit IDs", () => {
   const result = validateDocumentSet(discovery([
-    document(
-      "hello-scholar/specs/search/SPEC-999-search/spec.md",
-      specAttributes({ id: "SPEC-999", topic: "search" })
-    ),
-    document(
-      "hello-scholar/specs/search/SPEC-1000-search/spec.md",
-      specAttributes({ id: "SPEC-1000", topic: "search" })
-    ),
-    document(
-      "hello-scholar/specs/wrong-topic/SPEC-002-other/spec.md",
-      specAttributes({ topic: "right-topic" })
-    ),
-    document(
-      "hello-scholar/specs/duplicate/SPEC-001-duplicate/spec.md",
-      specAttributes({ topic: "duplicate" })
-    ),
+    document("hello-scholar/specs/search/SPEC-999-search/spec.md", specAttributes({ id: "SPEC-999", topic: "search" })),
+    document("hello-scholar/specs/search/SPEC-1000-search/spec.md", specAttributes({ id: "SPEC-1000", topic: "search" })),
+    document("hello-scholar/specs/wrong-topic/SPEC-002-other/spec.md", specAttributes({ topic: "right-topic" })),
+    document("hello-scholar/specs/duplicate/SPEC-001-duplicate/spec.md", specAttributes({ topic: "duplicate" })),
   ]));
 
   const codes = errorCodes(result);
@@ -433,63 +201,11 @@ test("checks path identity, globally unique Spec IDs, and three-or-more digit ID
   assert.ok(codes.has("bundle-id-mismatch"));
   assert.equal(result.errors.some((error) => error.message.includes("SPEC-999") && error.code === "invalid-spec-id"), false);
   assert.equal(result.errors.some((error) => error.message.includes("SPEC-1000") && error.code === "invalid-spec-id"), false);
-
-  const wrongKind = validateDocumentSet(discovery([
-    document(`${bundle}/plan.md`, { ...planAttributes(), kind: "spec" }),
-  ]));
-  assert.ok(errorCodes(wrongKind).has("kind-path-mismatch"));
-});
-
-test("separates Tasks approval from execution state and rejects fake completion", () => {
-  const documents = [
-    document(`${bundle}/spec.md`, specAttributes()),
-    document(`${bundle}/plan.md`, planAttributes()),
-    document(
-      `${bundle}/tasks.md`,
-      tasksAttributes({
-        approval: "pending-review",
-        approved_revision: 4,
-        status: "completed",
-      }),
-      [
-        "- [x] T001: Done once",
-        "- [ ] T001：Duplicate and incomplete",
-      ].join("\n")
-    ),
-    document("hello-scholar/architecture.md", architectureAttributes()),
-  ];
-  const result = validateDocumentSet(discovery(documents));
-  const codes = errorCodes(result);
-
-  assert.ok(codes.has("invalid-task-approval"));
-  assert.ok(codes.has("unapproved-task-execution"));
-  assert.ok(codes.has("duplicate-task-id"));
-  assert.ok(codes.has("incomplete-tasks-marked-completed"));
-
-  const staleCompleted = validateDocumentSet(discovery([
-    document(`${bundle}/spec.md`, specAttributes()),
-    document(`${bundle}/plan.md`, planAttributes()),
-    document(
-      `${bundle}/tasks.md`,
-      tasksAttributes({ spec_revision: 2, status: "completed" }),
-      "- [x] T001: Complete\n"
-    ),
-    document("hello-scholar/architecture.md", architectureAttributes()),
-  ]));
-  assert.ok(errorCodes(staleCompleted).has("stale-tasks-marked-completed"));
-
-  const emptyCompleted = validateDocumentSet(discovery([
-    document(`${bundle}/spec.md`, specAttributes()),
-    document(`${bundle}/plan.md`, planAttributes()),
-    document(`${bundle}/tasks.md`, tasksAttributes({ status: "completed" }), "# No tasks\n"),
-    document("hello-scholar/architecture.md", architectureAttributes()),
-  ]));
-  assert.ok(errorCodes(emptyCompleted).has("empty-tasks-marked-completed"));
 });
 
 test("validates Spec replacement references, reciprocity, missing IDs, and cycles", () => {
   const makeSpec = (id, topic, relations) => {
-    // Purpose: build a related Spec fixture; Input: Spec ID, topic, and relation overrides; Output: discovered Spec document.
+    // Purpose: build a related Spec fixture; Input: ID, topic, and relation overrides; Output: document.
     return document(
       `hello-scholar/specs/${topic}/${id}-${topic}/spec.md`,
       specAttributes({ id, topic, ...relations })
@@ -504,120 +220,164 @@ test("validates Spec replacement references, reciprocity, missing IDs, and cycle
     makeSpec("SPEC-015", "target", {}),
     document("hello-scholar/architecture.md", architectureAttributes()),
   ]));
-  const codes = errorCodes(result);
 
+  const codes = errorCodes(result);
   assert.ok(codes.has("spec-relation-cycle"));
   assert.ok(codes.has("spec-self-reference"));
   assert.ok(codes.has("missing-spec-reference"));
   assert.ok(codes.has("inconsistent-spec-relation"));
 });
 
-test("validates Record association revisions and lifecycle timestamps", () => {
-  const records = [
-    document("runs/partial/record.md", recordAttributes({
-      run_id: "partial",
-      spec_revision: null,
-    })),
-    document("runs/running/record.md", recordAttributes({
-      run_id: "running",
-      status: "running",
-      started: null,
-      completed: null,
-    })),
-    document("runs/backwards/record.md", recordAttributes({
-      run_id: "backwards",
-      completed: "2026-08-01T13:30:00+08:00",
-    })),
-    document("runs/invalid-time/record.md", recordAttributes({
-      run_id: "invalid-time",
-      started: "2026-02-30T14:30:00+08:00",
-    })),
-    document("runs/future-spec/record.md", recordAttributes({
-      run_id: "future-spec",
-      spec_revision: 4,
-    })),
-    document("runs/future-plan/record.md", recordAttributes({
-      run_id: "future-plan",
-      plan_revision: 3,
-    })),
-    document("runs/missing-spec/record.md", recordAttributes({
-      run_id: "missing-spec",
-      spec: "SPEC-999",
-    })),
-    document("runs/exploration/record.md", recordAttributes({
-      run_id: "exploration",
-      status: "planned",
-      spec: null,
-      spec_revision: null,
-      plan_revision: null,
-      started: null,
-      completed: null,
-      decision: "pending",
-    })),
-  ];
-  const result = validateDocumentSet(discovery([
+test("schema 2 Records use a paired optional Spec association without Plan metadata", () => {
+  const associated = validateDocumentSet(discovery([
     document(`${bundle}/spec.md`, specAttributes()),
-    document(`${bundle}/plan.md`, planAttributes()),
+    document("runs/current/record.md", recordV2Attributes({ run_id: "current" })),
+    document("runs/independent/record.md", recordV2Attributes({
+      run_id: "independent", status: "planned", spec: null, spec_revision: null,
+      started: null, completed: null, decision: "pending",
+    })),
     document("hello-scholar/architecture.md", architectureAttributes()),
-    ...records,
   ]));
-  const codes = errorCodes(result);
 
-  assert.ok(codes.has("partial-record-association"));
-  assert.ok(codes.has("invalid-record-lifecycle"));
-  assert.ok(codes.has("invalid-timestamp"));
-  assert.ok(codes.has("record-time-order"));
-  assert.ok(codes.has("future-spec-revision"));
-  assert.ok(codes.has("future-plan-revision"));
-  assert.ok(codes.has("missing-record-spec"));
-  assert.ok(noticeCodes(result).has("unassociated-record"));
+  assert.deepEqual(associated.errors, []);
+  assert.ok(noticeCodes(associated).has("unassociated-record"));
+  assert.equal(Object.hasOwn(associated.records[0], "planRevision"), false);
+
+  const invalid = validateDocumentSet(discovery([
+    document(`${bundle}/spec.md`, specAttributes()),
+    document("runs/partial/record.md", recordV2Attributes({ run_id: "partial", spec_revision: null })),
+    document("runs/future/record.md", recordV2Attributes({ run_id: "future", spec_revision: 4 })),
+    document("runs/missing/record.md", recordV2Attributes({ run_id: "missing", spec: "SPEC-999" })),
+    document("hello-scholar/architecture.md", architectureAttributes()),
+  ]));
+  assert.ok(errorCodes(invalid).has("partial-record-association"));
+  assert.ok(errorCodes(invalid).has("future-spec-revision"));
+  assert.ok(errorCodes(invalid).has("missing-record-spec"));
 });
 
-test("validates discovered files without changing any Fixture bytes", () => {
+test("schema 1 Records preserve Plan field validation but missing historical Plans are notices", () => {
+  const recordPath = "runs/history/record.md";
+  const withoutPlan = validateDocumentSet(discovery([
+    document(`${bundle}/spec.md`, specAttributes()),
+    document(recordPath, recordV1Attributes({ run_id: "history" })),
+    document("hello-scholar/architecture.md", architectureAttributes()),
+  ]));
+  assert.deepEqual(withoutPlan.errors, []);
+  assert.ok(noticeCodes(withoutPlan).has("historical-plan-missing"));
+
+  const withPlan = validateDocumentSet(discovery([
+    document(`${bundle}/spec.md`, specAttributes()),
+    document(recordPath, recordV1Attributes({ run_id: "history" })),
+    document("hello-scholar/architecture.md", architectureAttributes()),
+  ], { historicalPaths: [`${bundle}/plan.md`] }));
+  assert.deepEqual(withPlan.errors, []);
+  assert.equal(noticeCodes(withPlan).has("historical-plan-missing"), false);
+  assert.ok(noticeCodes(withPlan).has("historical-document"));
+  assert.equal(withPlan.records[0].planRevision, 1);
+
+  const invalidPlanRevision = validateDocumentSet(discovery([
+    document(recordPath, recordV1Attributes({ run_id: "history", plan_revision: 0 })),
+  ]));
+  assert.ok(errorCodes(invalidPlanRevision).has("invalid-positive-integer"));
+});
+
+test("Record body organization does not change metadata validation or source text", () => {
+  const attributes = recordV2Attributes({ decision: "do-not-adopt", summary: "81.2 below 82.0" });
+  const bodies = [
+    "## Execution Information\n\npython3 benchmark.py; exit 0.\n\n## Key Results\n\n81.2 below 82.0; do not adopt.\n",
+    "## 运行与结论\n\npython3 benchmark.py; exit 0.\n\n81.2 below 82.0; do not adopt.\n",
+  ];
+  const results = bodies.map((body) => {
+    const input = discovery([
+      document(`${bundle}/spec.md`, specAttributes()),
+      document(`runs/${attributes.run_id}/record.md`, attributes, body),
+      document("hello-scholar/architecture.md", architectureAttributes()),
+    ]);
+    const before = structuredClone(input);
+    const result = validateDocumentSet(input);
+    assert.deepEqual(result.errors, []);
+    assert.deepEqual(input, before);
+    assert.equal(result.records[0].body, body);
+    return result.records.map(({ body: recordBody, ...metadata }) => metadata);
+  });
+  assert.deepEqual(results[0], results[1]);
+
+  const invalid = { ...attributes };
+  delete invalid.started;
+  const result = validateDocumentSet(discovery([
+    document(`runs/${attributes.run_id}/record.md`, invalid, bodies[1]),
+  ]));
+  assert.ok(errorCodes(result).has("missing-field"));
+  assert.ok(errorCodes(result).has("invalid-record-lifecycle"));
+});
+
+test("keeps stale Spec references and rejects invalid Record times", () => {
+  const result = validateDocumentSet(discovery([
+    document(`${bundle}/spec.md`, specAttributes()),
+    document("runs/stale/record.md", recordV2Attributes({ run_id: "stale", spec_revision: 1 })),
+    document("runs/backwards/record.md", recordV2Attributes({ run_id: "backwards", completed: "2026-08-01T13:30:00+08:00" })),
+    document("runs/invalid-time/record.md", recordV2Attributes({ run_id: "invalid-time", started: "2026-02-30T14:30:00+08:00" })),
+    document("runs/running/record.md", recordV2Attributes({ run_id: "running", status: "running", started: null, completed: null })),
+    document("hello-scholar/architecture.md", architectureAttributes()),
+  ]));
+
+  assert.deepEqual(result.errors.filter((error) => error.path === "runs/stale/record.md"), []);
+  assert.ok(errorCodes(result).has("invalid-record-lifecycle"));
+  assert.ok(errorCodes(result).has("invalid-timestamp"));
+  assert.ok(errorCodes(result).has("record-time-order"));
+});
+
+test("schema 2 supports cancellation before launch without weakening other terminal states", () => {
+  const validate = (overrides = {}) => {
+    const attributes = recordV2Attributes({
+      status: "cancelled", started: null, spec: null, spec_revision: null,
+      decision: "do-not-run", summary: "Cancelled before launch", ...overrides,
+    });
+    const input = discovery([document(`runs/${attributes.run_id}/record.md`, attributes)]);
+    const before = structuredClone(input);
+    const result = validateDocumentSet(input);
+    assert.deepEqual(input, before);
+    return result;
+  };
+
+  assert.deepEqual(validate().errors, []);
+  assert.deepEqual(validate({ started: "2026-08-01T14:30:00+08:00" }).errors, []);
+  for (const completed of [null, undefined, "not-a-time"]) {
+    assert.ok(errorCodes(validate({ completed })).has("invalid-record-lifecycle"));
+  }
+  for (const started of [undefined, "not-a-time"]) {
+    assert.ok(errorCodes(validate({ started })).has("invalid-record-lifecycle"));
+  }
+  for (const status of ["completed", "failed", "interrupted", "running"]) {
+    assert.ok(errorCodes(validate({ status })).has("invalid-record-lifecycle"), status);
+  }
+  assert.ok(errorCodes(validate({
+    started: "2026-08-01T18:00:00+08:00",
+  })).has("record-time-order"));
+  assert.ok(errorCodes(validate({
+    schema: 1, plan_revision: null,
+  })).has("invalid-record-lifecycle"));
+});
+
+test("validates discovered files without changing source or historical bytes", () => {
   const projectRoot = fs.mkdtempSync(path.join(os.tmpdir(), "hello-scholar-validation-"));
   const specPath = path.join(projectRoot, ...`${bundle}/spec.md`.split("/"));
-  const architecturePath = path.join(projectRoot, "hello-scholar", "architecture.md");
+  const planPath = path.join(projectRoot, ...`${bundle}/plan.md`.split("/"));
   try {
     fs.mkdirSync(path.dirname(specPath), { recursive: true });
     fs.writeFileSync(specPath, [
-      "---",
-      "schema: 1",
-      "kind: spec",
-      "id: SPEC-001",
-      "title: Paged Cache",
-      "topic: kv-cache",
-      "type: research",
-      "status: accepted",
-      "revision: 3",
-      "summary: Remove fragmentation failures",
-      "created: 2026-07-20",
-      "updated: 2026-08-01",
-      "supersedes: []",
-      "superseded_by: null",
-      "---",
-      "# Paged Cache",
-      "",
+      "---", "schema: 1", "kind: spec", "id: SPEC-001", "title: Paged Cache",
+      "topic: kv-cache", "type: research", "status: accepted", "revision: 3",
+      "summary: Remove fragmentation failures", "created: 2026-07-20", "updated: 2026-08-01",
+      "supersedes: []", "superseded_by: null", "---", "# Paged Cache", "",
     ].join("\n"), "utf8");
-    fs.mkdirSync(path.dirname(architecturePath), { recursive: true });
-    fs.writeFileSync(architecturePath, [
-      "---",
-      "schema: 1",
-      "kind: architecture",
-      "status: current",
-      "applies_to: main",
-      "updated: 2026-08-03",
-      "---",
-      "# Current Architecture",
-      "",
-    ].join("\n"), "utf8");
-    const before = new Map([
-      [specPath, fs.readFileSync(specPath)],
-      [architecturePath, fs.readFileSync(architecturePath)],
-    ]);
+    fs.writeFileSync(planPath, "malformed historical Plan\n", "utf8");
+    const before = new Map([[specPath, fs.readFileSync(specPath)], [planPath, fs.readFileSync(planPath)]]);
 
     const result = validateDocumentSet(discoverDocuments(projectRoot));
 
     assert.deepEqual(result.errors, []);
+    assert.ok(noticeCodes(result).has("historical-document"));
     for (const [filePath, bytes] of before) {
       assert.deepEqual(fs.readFileSync(filePath), bytes);
     }
@@ -626,26 +386,18 @@ test("validates discovered files without changing any Fixture bytes", () => {
   }
 });
 
-test("converts discovery safety and legacy findings into sorted diagnostics", () => {
+test("converts discovery safety, legacy, and misplaced findings into sorted diagnostics", () => {
   const result = validateDocumentSet(discovery([], {
     legacyPaths: ["hello-scholar/memory/specs/old.md"],
-    misplacedPaths: ["hello-scholar/specs/orphan/plan.md"],
+    historicalPaths: ["hello-scholar/specs/orphan/tasks.md"],
+    misplacedPaths: ["hello-scholar/specs/orphan/spec.md"],
     forbiddenRunDocuments: ["runs/demo/README.md"],
     unsafePaths: [{ relativePath: "runs/linked", reason: "symbolic link or junction" }],
   }));
 
-  assert.deepEqual(errorCodes(result), new Set([
-    "forbidden-run-document",
-    "misplaced-document",
-    "unsafe-path",
-  ]));
-  assert.deepEqual(noticeCodes(result), new Set([
-    "architecture-missing",
-    "legacy-path",
-  ]));
+  assert.deepEqual(errorCodes(result), new Set(["forbidden-run-document", "misplaced-document", "unsafe-path"]));
+  assert.deepEqual(noticeCodes(result), new Set(["architecture-missing", "historical-document", "legacy-path"]));
   assert.deepEqual(result.errors.map((diagnostic) => diagnostic.path), [
-    "hello-scholar/specs/orphan/plan.md",
-    "runs/demo/README.md",
-    "runs/linked",
+    "hello-scholar/specs/orphan/spec.md", "runs/demo/README.md", "runs/linked",
   ]);
 });

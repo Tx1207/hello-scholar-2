@@ -1,87 +1,40 @@
 ---
 name: manage-specs
-description: 将设计请求归入一个稳定 Spec 身份。创建、修订或替代 Spec 前使用；其他设计 Skill 需要 canonical Spec owner 时也使用。
+description: 当设计决定、接口、不变量或验收契约需要稳定归属时，创建、修订或替代持久 Spec。
 ---
 
 # Manage Specs
 
-本 Skill 只负责一个设计请求的 Spec 身份 **classification**。只能返回以下之一：
+任务需要持久设计时，维护一份完整、可审核的 Spec。仅要求讨论方案时保持讨论。保存已确定的决定和关键未决问题；尚未确定的设计可以保存为 draft。
 
-- `Update Existing Spec`
-- `Create Independent Spec`
-- `Create Successor Spec`
-- `Need Human Classification`
+## 选择归属
 
-结果必须列出候选 Spec、依据和下一道确认门。本 Skill 负责 Spec 身份与 Revision 维护；方案设计、Spec acceptance、Plan、Tasks 和实施由各自 owner 负责。
+检查 Current Architecture、相关代码与测试、`hello-scholar docs check`、可用 Index 和可能相关的 Spec。选择事实支持的最简单分支：
 
-## 1. 建立文档事实
+- **修订**：已有一个 Spec 负责相同能力和生命周期。
+- **新建**：能力具有独立价值、验收边界和生命周期。
+- **替代**：目标设计将取代已经采用的契约或实现模型。
 
-1. 确认项目根目录并运行：
-   ```sh
-   hello-scholar docs check
-   ```
-   如果检查报告生成的 Index 过期，再运行 `hello-scholar docs sync` 后读取候选项。
-2. 遇到结构错误时停止并报告 diagnostics。
-3. 读取全局 Spec Index、存在时的目标 Topic Index，以及问题、目标或 owner 边界可能匹配的候选 `spec.md`。只读取区分候选所需的项目事实。
+当项目事实明显支持一个归属时直接决定。只有多个归属或关键产品选择同样合理时，才询问一个聚焦问题。创建新身份时读取 [assets/spec-identity.zh_CN.md](assets/spec-identity.zh_CN.md)。
 
-**完成条件：** 请求已有基于当前项目事实的有限候选集。
+## 保存设计
 
-## 2. 确定一个身份
+保留用户决定、相关项目事实、接口、不变量、实施边界和可观察验收。重要候选方案及其理由能够解释当前设计时，将其记录下来。区分未决问题与已接受的决定，不在写作时静默替用户决定。
 
-| 分类 | 依据 | 写入前的结果 |
-| --- | --- | --- |
-| `Update Existing Spec` | 一个 Spec 已拥有相同的问题、能力和生命周期。 | 指出该 Spec 及共享边界。 |
-| `Create Independent Spec` | 该能力具有独立价值，并能独立批准、实施、验证和回滚。 | 写明独立生命周期事实并提出一条 canonical 路径。 |
-| `Create Successor Spec` | 新设计替换活跃实现模型，或移除既有设计要求的存储、协议或生命周期边界。 | 指出被替代 Spec、历史边界和 successor canonical 路径。 |
-| `Need Human Classification` | 读取本地事实后仍有多个同样合理的 owner。 | 展示竞争边界和一个身份决定。 |
+使用 `schema: 1` 和 canonical 路径：
 
-同一问题的候选方案保留在同一 Spec 的 `候选方案与权衡`，不成为不同身份。
-
-返回 `Create Independent Spec` 或 `Create Successor Spec` 前，读取 [`assets/spec-identity.zh_CN.md`](assets/spec-identity.zh_CN.md)；使用英文回复时读取 [`assets/spec-identity.md`](assets/spec-identity.md)。完成其中的 **Stable Identity Test**，再在确认请求中重复完整拟定路径。
-
-**完成条件：** 回复含一个分类、具体依据、创建身份时的一条完整路径，以及一道确认门或明确停止点。
-
-## 3. 应用已确认分类
-
-只有回复明确绑定第 2 步提出的分类和精确身份后才继续。
-
-### Update Existing Spec
-
-- 完整读取当前 `spec.md`。将当前完整文件作为 **Baseline**，将用户批准的决定或当前上游合同作为 **Authority**，将本次请求作为 **Delta**；Delta 未提及的内容继续有效。
-- 写入前，将每项 Baseline 决定和 Delta 变化归为 `Keep`、`Modify`、`Remove`、`Add` 或 `Move`。默认使用 `Keep`；只有明确决定、直接冲突、替代关系或对已删除内容的依赖才能作为 `Remove` 依据。
-- 将处置账本归并成一份完整的 Current Spec。保持 ID、Topic、Bundle 路径和 `created`；同步更新受影响的接口、不变量、风险和验收，并移除已废弃决定的残余引用。
-- 语义变化时递增 `revision`，设为 `status: draft`，更新 `updated`，并追加一条只概括变化、不复制旧正文的 `Revision History`。
-- 只修正格式时保持 Revision。
-- 只修改该 `spec.md`；现有 Plan 和 Tasks 可以变为 stale。
-- 最后执行整份语义守恒审核：每项 Baseline 恰有一种处置，每项 Delta 都已整合，未受影响内容仍存在，废弃内容已移除，且每项删除或大范围改写都有 Authority。
-
-### Create Independent Spec
-
-- 读取 `assets/` 的对应模板：中文项目使用 `spec-template.zh_CN.md`，否则使用 `spec-template.md`。
-- 在已确认路径创建 `status: draft`、`revision: 1`、`supersedes: []`、`superseded_by: null` 的 Spec。
-
-### Create Successor Spec
-
-- 按上述方式创建已确认 draft，并在 `supersedes` 写入旧 ID。
-- 同一事务更新旧 `spec.md`：让 `superseded_by` 指向新 ID，记录语义 Revision，并将活跃 owner 设为 `superseded`。
-- 验证关系互惠、非自指且无环。这是唯一允许写入多份 Spec 的分支。
-
-### Need Human Classification
-
-返回未解决的身份决定，项目保持零写入。
-
-**完成条件：** 每份变更的 `spec.md` 都匹配已确认分支和身份；Plan、Tasks、Architecture、源码和 Run 保持不变。
-
-## 4. 验证与交接
-
-写入 Spec 后运行一次：
-
-```sh
-hello-scholar docs sync
+```text
+hello-scholar/specs/<topic>/SPEC-NNN-<name>/spec.md
 ```
 
-只有 CLI 重建生成的 Index。确认最终 diff 仅包含所选 Spec 事务和生成的 Index。
+尚未确定的设计使用 `draft`。用户接受当前修订，或明确要求按该修订实施时，在解决关键未决选择后设为 `accepted`。实施进度不增加新状态：保持 `accepted`，并在每个稳定 `AC-NN` 旁记录当前证据。只有当前 Revision 的全部验收要求都有当前有效的证据时才设为 `completed`。
 
-新建 Spec 和语义更新保持 `draft`，直到用户批准完整 Spec。然后停在下一位被请求的 owner。
+语义变化递增 `revision`，并同步更新受影响的决定和验收；未受影响的内容继续保留。仅补充证据、格式、日期或生命周期不增加 Revision。修订前完整读取现有 Spec。
 
-**完成条件：** `docs sync` 成功，生成 Index 为 current，且每条变更路径都属于已确认事务。
+替代设计先在 draft 中说明拟替代对象，不提前使现有 Spec 失效。只有 successor 已实现、获采用并完成验证后，才写入双方 `supersedes` / `superseded_by` 并将 predecessor 设为 `superseded`。
+
+新中文 Spec 使用 [assets/spec-template.zh_CN.md](assets/spec-template.zh_CN.md)，英文使用 [assets/spec-template.md](assets/spec-template.md)。优先采用当前任务指定语言，否则沿用目标项目或现有 Spec 的语言。现有 Spec 不因模板更新而整体重排。
+
+## 完成
+
+检查变更的 Spec，只使用副作用符合当前授权范围的可用检查。只有 CLI 可用且生成 Index 的写入已获授权时才运行 `hello-scholar docs sync`；否则报告跳过的维护，不阻塞 Spec。不创建 `plan.md` 或 `tasks.md`。用户已经要求实施时，在同一授权内继续实施并验证 accepted Spec。

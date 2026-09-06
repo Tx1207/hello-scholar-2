@@ -42,4 +42,10 @@ superseded_by: null
 
 ## 7. Acceptance and Validation
 
-<Give observable completion criteria and the required tests, benchmarks, Eval, or formal experiments.>
+Use stable identifiers and record current evidence in place. Do not infer completion from a task list.
+
+| Acceptance | Requirement | Current conclusion | Evidence |
+| --- | --- | --- | --- |
+| AC-01 | <Observable required outcome> | Pending | None |
+
+<Add the relevant tests, benchmarks, Eval, or formal experiments. Evidence should name the Spec revision and implementation or working-tree state it covers.>

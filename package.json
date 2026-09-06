@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "commonjs",
+  "files": ["bin/", "src/", "skills/", "AGENTS.md", "README.md", "LICENSE"],
   "bin": {
     "hello-scholar": "bin/hello-scholar.js"
   },

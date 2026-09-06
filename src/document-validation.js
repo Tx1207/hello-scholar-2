@@ -8,17 +8,9 @@ const REQUIRED_FIELDS = {
     "schema", "kind", "id", "title", "topic", "type", "status", "revision",
     "summary", "created", "updated", "supersedes", "superseded_by",
   ],
-  plan: [
-    "schema", "kind", "spec", "spec_revision", "revision", "status", "title",
-    "summary", "created", "updated",
-  ],
-  tasks: [
-    "schema", "kind", "spec", "spec_revision", "plan_revision", "revision",
-    "approval", "approved_revision", "status", "created", "updated",
-  ],
   record: [
     "schema", "kind", "run_id", "title", "status", "spec", "spec_revision",
-    "plan_revision", "started", "completed", "decision", "summary",
+    "started", "completed", "decision", "summary",
   ],
   architecture: ["schema", "kind", "status", "applies_to", "updated"],
 };
@@ -26,21 +18,8 @@ const REQUIRED_FIELDS = {
 const ENUMS = {
   specType: new Set(["research", "prototype", "capability", "system-design"]),
   specStatus: new Set(["draft", "accepted", "completed", "rejected", "withdrawn", "superseded"]),
-  planStatus: new Set(["draft", "approved", "completed", "cancelled"]),
-  tasksApproval: new Set(["pending-review", "approved"]),
-  tasksStatus: new Set(["pending", "in-progress", "completed", "cancelled"]),
   recordStatus: new Set(["planned", "running", "completed", "failed", "interrupted", "cancelled"]),
 };
-
-const REQUIRED_TASK_BLOCK_FIELDS = [
-  "Spec Coverage", "Depends On", "Parallel", "Files", "Work", "Validation", "Completion",
-];
-const CANONICAL_TASK_ID_PATTERN = /^T[0-9]{3,}$/;
-const CANONICAL_TASK_PATTERN = /^- \[([ xX])\] (T[0-9]{3,}): ([^\r\n]*\S[^\r\n]*)$/;
-const TOP_LEVEL_COMPLETION_TASK_PATTERN = /^- \[([ xX])\] (T[0-9]{3,})(?:：|:)/;
-const TOP_LEVEL_TASK_LIKE_CHECKBOX_PATTERN = /^- \[([ xX])\] (T[0-9]+)(?=$|[ \t:：—–-])/;
-const TOP_LEVEL_TASK_LIKE_HEADING_PATTERN = /^#{1,6}[ \t]+(T[0-9]+)(?=$|[ \t:：—–-])/;
-const TASK_BLOCK_FIELD_PATTERN = /^ {2}- (Spec Coverage|Depends On|Parallel|Files|Work|Validation|Completion):(?:[ \t]|$)/;
 
 function classifyPath(relativePath) {
   // Purpose: map a canonical project-relative path to its document role; Input: relative path; Output: location metadata or null.
@@ -49,7 +28,7 @@ function classifyPath(relativePath) {
   }
 
   let match = relativePath.match(
-    /^hello-scholar\/specs\/([^/]+)\/([^/]+)\/(spec|plan|tasks)\.md$/
+    /^hello-scholar\/specs\/([^/]+)\/([^/]+)\/(spec)\.md$/
   );
   if (match) {
     return {
@@ -147,6 +126,15 @@ function validateDocumentSet(discoveryResult) {
   for (const relativePath of discoveryResult.legacyPaths || []) {
     addNotice("legacy-path", relativePath, "legacy hello-scholar path requires reviewed migration");
   }
+  const historicalPaths = new Set(discoveryResult.historicalPaths || []);
+  for (const relativePath of historicalPaths) {
+    const label = relativePath.endsWith("/plan.md") ? "Plan" : "Tasks";
+    addNotice(
+      "historical-document",
+      relativePath,
+      `historical ${label} is not part of the current document model`
+    );
+  }
   for (const relativePath of discoveryResult.misplacedPaths || []) {
     addError("misplaced-document", relativePath, "core document is outside its required path");
   }
@@ -192,14 +180,8 @@ function validateDocumentSet(discoveryResult) {
   }
 
   const specEntries = typed.filter((entry) => entry.location.kind === "spec");
-  const planEntries = typed.filter((entry) => entry.location.kind === "plan");
-  const tasksEntries = typed.filter((entry) => entry.location.kind === "tasks");
   const recordEntries = typed.filter((entry) => entry.location.kind === "record");
   const architectureEntries = typed.filter((entry) => entry.location.kind === "architecture");
-
-  for (const entry of tasksEntries) {
-    validateTaskBlocks(entry.document.body || "", entry.document.relativePath, addError);
-  }
 
   const specsById = new Map();
   for (const entry of specEntries) {
@@ -214,101 +196,8 @@ function validateDocumentSet(discoveryResult) {
     }
   }
 
-  const bundles = new Map();
-  for (const entry of [...specEntries, ...planEntries, ...tasksEntries]) {
-    let bundle = bundles.get(entry.location.bundlePath);
-    if (!bundle) {
-      bundle = {};
-      bundles.set(entry.location.bundlePath, bundle);
-    }
-    if (bundle[entry.location.kind]) {
-      addError(
-        "duplicate-bundle-document",
-        entry.document.relativePath,
-        `Bundle has more than one ${entry.location.kind}.md`
-      );
-    } else {
-      bundle[entry.location.kind] = entry;
-    }
-  }
-
-  for (const [bundlePath, bundle] of bundles) {
-    if (!bundle.spec && bundle.plan) {
-      addError("orphan-plan", bundle.plan.document.relativePath, "Plan has no Spec in the same Bundle");
-    }
-    if (!bundle.spec && bundle.tasks) {
-      addError("orphan-tasks", bundle.tasks.document.relativePath, "Tasks has no Spec in the same Bundle");
-    }
-    if (bundle.tasks && !bundle.plan) {
-      addError("tasks-without-plan", bundle.tasks.document.relativePath, "Tasks requires Plan in the same Bundle");
-    }
-    if (!bundle.spec && !bundle.plan && !bundle.tasks) {
-      bundles.delete(bundlePath);
-    }
-  }
-
   const specs = specEntries.map((specEntry) => {
-    const bundle = bundles.get(specEntry.location.bundlePath) || {};
-    const planEntry = bundle.plan || null;
-    const tasksEntry = bundle.tasks || null;
     const spec = specEntry.attributes;
-
-    let planState = "Missing";
-    if (!planEntry) {
-      addNotice(
-        "plan-missing",
-        `${specEntry.location.bundlePath}/plan.md`,
-        `Spec ${String(spec.id)} has no Plan`
-      );
-    } else {
-      if (planEntry.attributes.spec !== spec.id) {
-        addError(
-          "plan-spec-mismatch",
-          planEntry.document.relativePath,
-          `Plan references ${String(planEntry.attributes.spec)} instead of ${String(spec.id)}`
-        );
-      }
-      planState = planEntry.attributes.spec_revision === spec.revision ? "Current" : "Stale";
-      if (planState === "Stale") {
-        addNotice(
-          "plan-stale",
-          planEntry.document.relativePath,
-          `Plan spec_revision ${String(planEntry.attributes.spec_revision)} does not match Spec revision ${String(spec.revision)}`
-        );
-      }
-    }
-
-    let tasksState = "Missing";
-    let completion = null;
-    if (!tasksEntry) {
-      addNotice(
-        "tasks-missing",
-        `${specEntry.location.bundlePath}/tasks.md`,
-        `Spec ${String(spec.id)} has no Tasks`
-      );
-    } else {
-      completion = taskCompletion(tasksEntry.document.body || "", tasksEntry.document.relativePath, addError);
-      if (tasksEntry.attributes.spec !== spec.id) {
-        addError(
-          "tasks-spec-mismatch",
-          tasksEntry.document.relativePath,
-          `Tasks references ${String(tasksEntry.attributes.spec)} instead of ${String(spec.id)}`
-        );
-      }
-      tasksState = planEntry
-        && tasksEntry.attributes.spec_revision === spec.revision
-        && tasksEntry.attributes.plan_revision === planEntry.attributes.revision
-        ? "Current"
-        : "Stale";
-      if (tasksState === "Stale") {
-        addNotice(
-          "tasks-stale",
-          tasksEntry.document.relativePath,
-          "Tasks revision references do not match the current Spec and Plan"
-        );
-      }
-      validateTaskState(tasksEntry, tasksState, completion, addError);
-    }
 
     return {
       id: spec.id,
@@ -325,20 +214,13 @@ function validateDocumentSet(discoveryResult) {
       relativePath: specEntry.document.relativePath,
       attributes: { ...spec },
       body: specEntry.document.body,
-      plan: planEntry ? copyDocument(planEntry.document) : null,
-      tasks: tasksEntry ? copyDocument(tasksEntry.document) : null,
-      planState,
-      tasksState,
-      completion,
-      approvalState: tasksEntry ? tasksEntry.attributes.approval : null,
-      tasksStatus: tasksEntry ? tasksEntry.attributes.status : null,
     };
   }).sort(compareSpecs);
 
   validateSpecRelations(specEntries, specsById, addError);
 
   const records = recordEntries.map((entry) => {
-    validateRecordAssociation(entry, specsById, bundles, addError, addNotice);
+    validateRecordAssociation(entry, specsById, historicalPaths, addError, addNotice);
     const attributes = entry.attributes;
     return {
       runId: attributes.run_id,
@@ -346,7 +228,7 @@ function validateDocumentSet(discoveryResult) {
       status: attributes.status,
       spec: attributes.spec,
       specRevision: attributes.spec_revision,
-      planRevision: attributes.plan_revision,
+      ...(attributes.schema === 1 ? { planRevision: attributes.plan_revision } : {}),
       started: attributes.started,
       completed: attributes.completed,
       decision: attributes.decision,
@@ -397,22 +279,30 @@ function validateDocumentSet(discoveryResult) {
 
 function validateFields(kind, attributes, relativePath, addError) {
   // Purpose: dispatch required and kind-specific metadata checks; Input: document kind, attributes, path, and error sink; Output: none; Side effects: appends errors.
-  for (const field of REQUIRED_FIELDS[kind]) {
+  const requiredFields = kind === "record" && attributes.schema === 1
+    ? [...REQUIRED_FIELDS.record, "plan_revision"]
+    : REQUIRED_FIELDS[kind];
+  for (const field of requiredFields) {
     if (!Object.prototype.hasOwnProperty.call(attributes, field)) {
       addError("missing-field", relativePath, `${kind} requires field ${field}`);
     }
   }
 
-  if (Object.prototype.hasOwnProperty.call(attributes, "schema") && attributes.schema !== 1) {
-    addError("invalid-schema", relativePath, "schema must be integer 1");
+  if (Object.prototype.hasOwnProperty.call(attributes, "schema")) {
+    const supported = kind === "record"
+      ? attributes.schema === 1 || attributes.schema === 2
+      : attributes.schema === 1;
+    if (!supported) {
+      addError(
+        "invalid-schema",
+        relativePath,
+        kind === "record" ? "Record schema must be integer 1 or 2" : "schema must be integer 1"
+      );
+    }
   }
 
   if (kind === "spec") {
     validateSpecFields(attributes, relativePath, addError);
-  } else if (kind === "plan") {
-    validatePlanFields(attributes, relativePath, addError);
-  } else if (kind === "tasks") {
-    validateTasksFields(attributes, relativePath, addError);
   } else if (kind === "record") {
     validateRecordFields(attributes, relativePath, addError);
   } else {
@@ -449,51 +339,34 @@ function validateSpecFields(attributes, path, addError) {
   }
 }
 
-function validatePlanFields(attributes, path, addError) {
-  // Purpose: validate Plan metadata and lifecycle fields; Input: attributes, path, and error sink; Output: none; Side effects: appends errors.
-  validateSpecId(attributes.spec, "spec", path, addError);
-  validatePositiveInteger(attributes.spec_revision, "spec_revision", path, addError);
-  validatePositiveInteger(attributes.revision, "revision", path, addError);
-  validateEnum(attributes.status, ENUMS.planStatus, "status", path, addError);
-  validateStringFields(attributes, ["title", "summary"], path, addError);
-  validateDateFields(attributes, ["created", "updated"], path, addError);
-}
-
-function validateTasksFields(attributes, path, addError) {
-  // Purpose: validate Tasks bindings, approval, and lifecycle metadata; Input: attributes, path, and error sink; Output: none; Side effects: appends errors.
-  validateSpecId(attributes.spec, "spec", path, addError);
-  validatePositiveInteger(attributes.spec_revision, "spec_revision", path, addError);
-  validatePositiveInteger(attributes.plan_revision, "plan_revision", path, addError);
-  validatePositiveInteger(attributes.revision, "revision", path, addError);
-  validateEnum(attributes.approval, ENUMS.tasksApproval, "approval", path, addError);
-  validateEnum(attributes.status, ENUMS.tasksStatus, "status", path, addError);
-  validateDateFields(attributes, ["created", "updated"], path, addError);
-
-  if (Object.prototype.hasOwnProperty.call(attributes, "approved_revision")
-      && attributes.approved_revision !== null
-      && !isPositiveInteger(attributes.approved_revision)) {
-    addError("invalid-positive-integer", path, "approved_revision must be a positive integer or null");
-  }
-}
-
 function validateRecordFields(attributes, path, addError) {
   // Purpose: validate Run Record associations and lifecycle timestamps; Input: attributes, path, and error sink; Output: none; Side effects: appends errors.
   validateStringFields(attributes, ["run_id", "title", "decision", "summary"], path, addError);
   validateEnum(attributes.status, ENUMS.recordStatus, "status", path, addError);
 
-  const association = [attributes.spec, attributes.spec_revision, attributes.plan_revision];
+  if (attributes.schema === 2 && Object.prototype.hasOwnProperty.call(attributes, "plan_revision")) {
+    addError("unexpected-record-field", path, "schema 2 Record must not contain plan_revision");
+  }
+
+  const association = attributes.schema === 1
+    ? [attributes.spec, attributes.spec_revision, attributes.plan_revision]
+    : [attributes.spec, attributes.spec_revision];
   const allNull = association.every((value) => value === null);
   const allPresent = association.every((value) => value !== null && value !== undefined);
   if (!allNull && !allPresent) {
     addError(
       "partial-record-association",
       path,
-      "spec, spec_revision, and plan_revision must all be set or all be null"
+      attributes.schema === 1
+        ? "schema 1 Record requires spec, spec_revision, and plan_revision to be all set or all null"
+        : "spec and spec_revision must be both set or both null"
     );
   } else if (allPresent) {
     validateSpecId(attributes.spec, "spec", path, addError);
     validatePositiveInteger(attributes.spec_revision, "spec_revision", path, addError);
-    validatePositiveInteger(attributes.plan_revision, "plan_revision", path, addError);
+    if (attributes.schema === 1) {
+      validatePositiveInteger(attributes.plan_revision, "plan_revision", path, addError);
+    }
   }
 
   for (const field of ["started", "completed"]) {
@@ -510,6 +383,11 @@ function validateRecordFields(attributes, path, addError) {
     addError("invalid-record-lifecycle", path, "planned Record requires null started and completed");
   } else if (status === "running" && (!startedValid || attributes.completed !== null)) {
     addError("invalid-record-lifecycle", path, "running Record requires started and null completed");
+  } else if (status === "cancelled" && attributes.schema === 2) {
+    // A planned Run can be cancelled without inventing a process start.
+    if ((!startedValid && attributes.started !== null) || !completedValid) {
+      addError("invalid-record-lifecycle", path, "cancelled Record requires null or valid started and a valid completed time");
+    }
   } else if (["completed", "failed", "interrupted", "cancelled"].includes(status)
       && (!startedValid || !completedValid)) {
     addError("invalid-record-lifecycle", path, `${status} Record requires started and completed`);
@@ -596,189 +474,6 @@ function validateDateFields(attributes, fields, path, addError) {
   }
 }
 
-function validateTaskBlocks(body, path, addError) {
-  // Purpose: require visible canonical Task blocks and their direct template fields; Input: Markdown body, path, and error sink; Output: none; Side effects: appends structural and missing-field errors.
-  const tasks = [];
-  let activeTask = null;
-  let taskLikeFormFound = false;
-  let fence = null;
-  let inHtmlComment = false;
-  for (const line of body.split(/\r?\n/)) {
-    if (fence !== null) {
-      const closing = line.match(/^ {0,3}(`+|~+)[ \t]*$/);
-      if (closing && closing[1][0] === fence.character
-          && closing[1].length >= fence.length) {
-        fence = null;
-      }
-      continue;
-    }
-    if (inHtmlComment) {
-      if (line.includes("-->")) {
-        inHtmlComment = false;
-      }
-      continue;
-    }
-
-    let visible = line;
-    const commentStart = visible.indexOf("<!--");
-    if (commentStart !== -1) {
-      if (visible.indexOf("-->", commentStart + 4) === -1) {
-        inHtmlComment = true;
-      }
-      visible = visible.slice(0, commentStart);
-    }
-    const opening = visible.match(/^ {0,3}(`{3,}|~{3,})/);
-    if (opening) {
-      fence = { character: opening[1][0], length: opening[1].length };
-      continue;
-    }
-
-    const canonicalMatch = visible.match(CANONICAL_TASK_PATTERN);
-    if (canonicalMatch) {
-      activeTask = { id: canonicalMatch[2], fields: new Set() };
-      tasks.push(activeTask);
-      continue;
-    }
-
-    if (/^\S/.test(visible)) {
-      activeTask = null;
-    }
-
-    const checkboxMatch = visible.match(TOP_LEVEL_TASK_LIKE_CHECKBOX_PATTERN);
-    if (checkboxMatch) {
-      taskLikeFormFound = true;
-      const id = checkboxMatch[2];
-      if (!CANONICAL_TASK_ID_PATTERN.test(id)) {
-        addError("invalid-task-id", path, `Task ID ${id} must match T[0-9]{3,}`);
-      } else {
-        addError(
-          "noncanonical-task-block",
-          path,
-          `Task ${id} must use - [ ] TNNN: <plain-language goal>`
-        );
-      }
-      continue;
-    }
-
-    const headingMatch = visible.match(TOP_LEVEL_TASK_LIKE_HEADING_PATTERN);
-    if (headingMatch) {
-      taskLikeFormFound = true;
-      const id = headingMatch[1];
-      if (!CANONICAL_TASK_ID_PATTERN.test(id)) {
-        addError("invalid-task-id", path, `Task ID ${id} must match T[0-9]{3,}`);
-      }
-      addError(
-        "noncanonical-task-block",
-        path,
-        `Task ${id} must use - [ ] TNNN: <plain-language goal>, not a heading`
-      );
-      continue;
-    }
-
-    const fieldMatch = visible.match(TASK_BLOCK_FIELD_PATTERN);
-    if (fieldMatch && activeTask !== null) {
-      activeTask.fields.add(fieldMatch[1]);
-    }
-  }
-
-  if (tasks.length === 0 && !taskLikeFormFound) {
-    addError("missing-canonical-tasks", path, "Tasks requires at least one top-level - [ ] TNNN: <plain-language goal> block");
-  }
-
-  for (const task of tasks) {
-    for (const field of REQUIRED_TASK_BLOCK_FIELDS) {
-      if (!task.fields.has(field)) {
-        addError("missing-task-field", path, `Task ${task.id} requires field ${field}`);
-      }
-    }
-  }
-}
-
-function taskCompletion(body, path, addError) {
-  // Purpose: calculate top-level Task completion outside comments and fences; Input: Markdown body, path, and error sink; Output: counts and percentage; Side effects: reports malformed lists.
-  const seen = new Set();
-  let completed = 0;
-  let total = 0;
-  let fence = null;
-  let inHtmlComment = false;
-  for (const line of body.split(/\r?\n/)) {
-    if (fence !== null) {
-      const closing = line.match(/^ {0,3}(`+|~+)[ \t]*$/);
-      if (closing && closing[1][0] === fence.character
-          && closing[1].length >= fence.length) {
-        fence = null;
-      }
-      continue;
-    }
-    if (inHtmlComment) {
-      if (line.includes("-->")) {
-        inHtmlComment = false;
-      }
-      continue;
-    }
-
-    let visible = line;
-    const commentStart = visible.indexOf("<!--");
-    if (commentStart !== -1) {
-      if (visible.indexOf("-->", commentStart + 4) === -1) {
-        inHtmlComment = true;
-      }
-      visible = visible.slice(0, commentStart);
-    }
-    const opening = visible.match(/^ {0,3}(`{3,}|~{3,})/);
-    if (opening) {
-      fence = { character: opening[1][0], length: opening[1].length };
-      continue;
-    }
-
-    const match = visible.match(TOP_LEVEL_COMPLETION_TASK_PATTERN);
-    if (!match) {
-      continue;
-    }
-    total += 1;
-    if (seen.has(match[2])) {
-      addError("duplicate-task-id", path, `Task ID ${match[2]} appears more than once`);
-    }
-    seen.add(match[2]);
-    if (match[1].toLowerCase() === "x") {
-      completed += 1;
-    }
-  }
-  return {
-    completed,
-    total,
-    percent: total === 0 ? 0 : Math.round((completed / total) * 100),
-  };
-}
-
-function validateTaskState(entry, tasksState, completion, addError) {
-  // Purpose: reconcile Tasks lifecycle with freshness and checkboxes; Input: Tasks entry, state, completion, and error sink; Output: none; Side effects: appends errors.
-  const attributes = entry.attributes;
-  const path = entry.document.relativePath;
-  if (attributes.approval === "pending-review") {
-    if (attributes.approved_revision !== null) {
-      addError("invalid-task-approval", path, "pending-review requires approved_revision: null");
-    }
-    if (attributes.status !== "pending") {
-      addError("unapproved-task-execution", path, "pending-review Tasks must remain pending");
-    }
-  } else if (attributes.approval === "approved"
-      && attributes.approved_revision !== attributes.revision) {
-    addError("invalid-task-approval", path, "approved_revision must equal the current Tasks revision");
-  }
-
-  if (attributes.status === "completed") {
-    if (tasksState !== "Current") {
-      addError("stale-tasks-marked-completed", path, "completed Tasks must be Current");
-    }
-    if (completion.total === 0) {
-      addError("empty-tasks-marked-completed", path, "completed Tasks must contain at least one Task");
-    } else if (completion.completed !== completion.total) {
-      addError("incomplete-tasks-marked-completed", path, "all top-level Tasks must be checked before completion");
-    }
-  }
-}
-
 function validateSpecRelations(specEntries, specsById, addError) {
   // Purpose: validate reciprocal, acyclic Spec supersession links; Input: Spec entries, ID map, and error sink; Output: none; Side effects: appends relation errors.
   for (const entry of specEntries) {
@@ -857,13 +552,15 @@ function validateSpecRelations(specEntries, specsById, addError) {
   }
 }
 
-function validateRecordAssociation(entry, specsById, bundles, addError, addNotice) {
-  // Purpose: validate a Record's optional Spec/Plan association; Input: Record, graph maps, and sinks; Output: none; Side effects: appends errors or notices.
+function validateRecordAssociation(entry, specsById, historicalPaths, addError, addNotice) {
+  // Purpose: validate a Record's optional Spec association and schema 1 provenance; Input: Record, Spec map, historical paths, and sinks; Output: none; Side effects: appends errors or notices.
   const attributes = entry.attributes;
   const path = entry.document.relativePath;
-  const association = [attributes.spec, attributes.spec_revision, attributes.plan_revision];
+  const association = attributes.schema === 1
+    ? [attributes.spec, attributes.spec_revision, attributes.plan_revision]
+    : [attributes.spec, attributes.spec_revision];
   if (association.every((value) => value === null)) {
-    addNotice("unassociated-record", path, "Record is not associated with a Spec Bundle");
+    addNotice("unassociated-record", path, "Record is not associated with a Spec");
     return;
   }
   if (!association.every((value) => value !== null && value !== undefined)) {
@@ -881,13 +578,15 @@ function validateRecordAssociation(entry, specsById, bundles, addError, addNotic
     addError("future-spec-revision", path, "Record references a future Spec revision");
   }
 
-  const bundle = bundles.get(specEntry.location.bundlePath) || {};
-  if (!bundle.plan) {
-    addError("missing-record-plan", path, "associated Record requires an existing Plan");
-  } else if (isPositiveInteger(attributes.plan_revision)
-      && isPositiveInteger(bundle.plan.attributes.revision)
-      && attributes.plan_revision > bundle.plan.attributes.revision) {
-    addError("future-plan-revision", path, "Record references a future Plan revision");
+  if (attributes.schema === 1) {
+    const historicalPlanPath = `${specEntry.location.bundlePath}/plan.md`;
+    if (!historicalPaths.has(historicalPlanPath)) {
+      addNotice(
+        "historical-plan-missing",
+        path,
+        `schema 1 Record references historical Plan revision ${String(attributes.plan_revision)}, but ${historicalPlanPath} is missing`
+      );
+    }
   }
 }
 

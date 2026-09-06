@@ -15,13 +15,9 @@ class CodeReviewCommentGuidanceTests(unittest.TestCase):
         """Keep the reviewer-facing English guidance aligned with the agreed semantics."""
         guidance = AGENTS_MD.read_text(encoding="utf-8")
 
-        self.assertIn("## 9. Code Comments", guidance)
-        self.assertIn("Comments are a guide for reviewers who did not implement the code", guidance)
-        self.assertIn("business rules, state changes, I/O, or multiple stages", guidance)
-        self.assertIn("caller-observable results or side effects", guidance)
-        self.assertIn("constraints, design rationale, and failure impact", guidance)
-        self.assertIn("Simple code needs no comments.", guidance)
-        self.assertIn("Treat disagreement among comments, code, and tests as a defect.", guidance)
+        portable = (REPO_ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+        for source in (guidance, portable):
+            self.assertIn("non-obvious contracts, reasons, and consequences", source)
 
     def test_comment_guidance_rejects_mechanical_contract_templates(self) -> None:
         """Prevent the retired mandatory comment template from returning."""
@@ -36,13 +32,10 @@ class CodeReviewCommentGuidanceTests(unittest.TestCase):
         """Keep the English rules equivalent to the approved Chinese source."""
         guidance = AGENTS_ZH.read_text(encoding="utf-8")
 
-        self.assertIn("## 9. 代码注释", guidance)
-        self.assertIn("注释是写给未参与实现的审阅者的导读", guidance)
-        self.assertIn("业务规则、状态变化、I/O 或多个阶段", guidance)
-        self.assertIn("调用方可观察的结果或副作用", guidance)
-        self.assertIn("约束、设计原因与失败影响", guidance)
-        self.assertIn("简单代码无需注释", guidance)
-        self.assertIn("注释、代码和测试不一致视为缺陷", guidance)
+        portable = (REPO_ROOT / "docs/maintenance/repository-guide.zh_CN.md").read_text(encoding="utf-8")
+        for source in (guidance, portable):
+            self.assertIn("不明显的契约、原因和影响", source)
+            self.assertIn("不复述语法", source)
 
 
 if __name__ == "__main__":

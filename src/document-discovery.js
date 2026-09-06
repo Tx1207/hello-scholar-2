@@ -44,10 +44,11 @@ function errorCode(error) {
 }
 
 function discoverDocuments(projectRoot) {
-  // Purpose: discover core and legacy documents inside one safe project root; Input: project root path; Output: sorted document/path inventory; Side effects: reads filesystem metadata and files.
+  // Purpose: discover core, historical, and legacy documents inside one safe project root; Input: project root path; Output: sorted document/path inventory; Side effects: reads filesystem metadata and core files.
   const rootPath = path.resolve(projectRoot);
   const documentsByPath = new Map();
   const legacyPaths = new Set();
+  const historicalPaths = new Set();
   const misplacedPaths = new Set();
   const forbiddenRunDocuments = new Set();
   const indexPaths = new Set();
@@ -73,6 +74,7 @@ function discoverDocuments(projectRoot) {
         compareStrings(left.relativePath, right.relativePath)
       ),
       legacyPaths: [...legacyPaths].sort(compareStrings),
+      historicalPaths: [...historicalPaths].sort(compareStrings),
       misplacedPaths: [...misplacedPaths].sort(compareStrings),
       forbiddenRunDocuments: [...forbiddenRunDocuments].sort(compareStrings),
       unsafePaths: [...unsafePaths.values()].sort((left, right) =>
@@ -220,6 +222,14 @@ function discoverDocuments(projectRoot) {
     }
   }
 
+  function addHistorical(segments) {
+    // Purpose: inventory a retired Plan or Tasks file without parsing its contents; Input: path segments; Output: none; Side effects: checks path safety and updates historical inventory.
+    const inspection = inspectPath(segments, "file");
+    if (inspection.status === "safe") {
+      historicalPaths.add(relativePathFor(segments));
+    }
+  }
+
   function inspectMisplacedFile(segments) {
     // Purpose: record and inspect a core document at an invalid path; Input: file segments; Output: none; Side effects: updates misplaced and unsafe inventories.
     misplacedPaths.add(relativePathFor(segments));
@@ -256,11 +266,7 @@ function discoverDocuments(projectRoot) {
 
       const childSegments = [...segments, name];
       if (name === "plan.md" || name === "tasks.md") {
-        if (legalBundle) {
-          addDocument(childSegments);
-        } else {
-          inspectMisplacedFile(childSegments);
-        }
+        addHistorical(childSegments);
         continue;
       }
       if (name === "spec.md" && legalBundle) {
@@ -300,7 +306,7 @@ function discoverDocuments(projectRoot) {
   }
 
   function scanRunDirectory(segments, legalRun, depthBelowRun = 0) {
-    // Purpose: inspect one Run while pruning artifact subtrees; Input: Run segments, legality flag, and depth; Output: none; Side effects: updates document and forbidden-path inventories.
+    // Purpose: inspect one Run while pruning artifact subtrees; Input: Run segments, legality flag, and depth; Output: none; Side effects: updates core, historical, and forbidden-path inventories.
     const entries = readDirectory(segments);
     if (entries === null) {
       return;
@@ -327,7 +333,7 @@ function discoverDocuments(projectRoot) {
         continue;
       }
       if (name === "plan.md" || name === "tasks.md") {
-        inspectMisplacedFile(childSegments);
+        addHistorical(childSegments);
         continue;
       }
 
@@ -354,7 +360,11 @@ function discoverDocuments(projectRoot) {
         continue;
       }
       const childSegments = [...segments, name];
-      if (name === "record.md" || name === "plan.md" || name === "tasks.md") {
+      if (name === "plan.md" || name === "tasks.md") {
+        addHistorical(childSegments);
+        continue;
+      }
+      if (name === "record.md") {
         inspectMisplacedFile(childSegments);
         continue;
       }

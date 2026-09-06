@@ -40,10 +40,10 @@ class NoFinishingDevelopmentBranchSkillTests(unittest.TestCase):
             self.assertFalse((RETIRED_DIR / relative_path).exists())
         self.assertNotIn("finishing-a-development-branch", discovered_skill_names())
 
-    def test_worktree_skill_remains_discoverable(self) -> None:
-        self.assertTrue((WORKTREE_SKILL / "SKILL.md").is_file())
-        self.assertTrue((WORKTREE_SKILL / "SKILL.zh_CN.md").is_file())
-        self.assertIn("using-git-worktrees", discovered_skill_names())
+    def test_worktree_skill_is_also_retired(self) -> None:
+        self.assertFalse((WORKTREE_SKILL / "SKILL.md").is_file())
+        self.assertFalse((WORKTREE_SKILL / "SKILL.zh_CN.md").is_file())
+        self.assertNotIn("using-git-worktrees", discovered_skill_names())
 
 
 if __name__ == "__main__":

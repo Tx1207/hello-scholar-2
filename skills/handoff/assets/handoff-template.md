@@ -9,10 +9,6 @@
 - [Completed or known state]
 - [What has not been done yet]
 
-## suggested skills
-
-- `[skill-name]`: [Why it may be useful]
-
 ## Next Steps
 
 1. [Next action]
@@ -21,3 +17,7 @@
 ## Risks And Notes
 
 - [Risk, constraint, or important context]
+
+## Verification State
+
+- [Command or check actually run, its result, or why it remains unverified]

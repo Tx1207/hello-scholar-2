@@ -1,33 +1,84 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { randomUUID } = require("node:crypto");
+const { createHash, randomUUID } = require("node:crypto");
+
+const INSTALL_MARKER = ".hello-scholar-install.json";
 
 function ensureParent(targetPath) {
   // Purpose: ensure a target's parent directory exists; Input: target path; Output: none; Side effects: creates directories recursively.
   fs.mkdirSync(path.dirname(targetPath), { recursive: true });
 }
 
-function sameRealPath(left, right) {
-  // Purpose: compare two paths by resolved identity; Input: two paths; Output: true when both resolve to the same node.
+function lstatPath(targetPath) {
+  // Purpose: inspect a path without following its final link; Output: lstat or null for an absent node, including a dangling link's destination.
   try {
-    return fs.realpathSync(left) === fs.realpathSync(right);
-  } catch {
-    return false;
+    return fs.lstatSync(targetPath);
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      return null;
+    }
+    throw error;
   }
 }
 
+function resolvedLinkTarget(targetPath) {
+  // Purpose: resolve link text lexically so dangling managed links remain identifiable; Output: absolute normalized destination.
+  const linkText = fs.readlinkSync(targetPath);
+  return path.resolve(path.dirname(targetPath), linkText);
+}
+
+function hashValue(value) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function directoryDigest(rootDir) {
+  // Purpose: fingerprint installed Skill content independently of its ownership marker; Output: deterministic SHA-256 digest; Errors: propagates unreadable or unsupported nodes.
+  const hash = createHash("sha256");
+
+  function visit(directory, relativeDirectory) {
+    for (const name of fs.readdirSync(directory).sort()) {
+      if (relativeDirectory === "" && name === INSTALL_MARKER) {
+        continue;
+      }
+      const absolutePath = path.join(directory, name);
+      const relativePath = path.posix.join(relativeDirectory, name);
+      const stat = fs.lstatSync(absolutePath);
+      if (stat.isDirectory()) {
+        hash.update(`directory\0${relativePath}\0`);
+        visit(absolutePath, relativePath);
+      } else if (stat.isFile()) {
+        hash.update(`file\0${relativePath}\0`);
+        hash.update(fs.readFileSync(absolutePath));
+        hash.update("\0");
+      } else if (stat.isSymbolicLink()) {
+        hash.update(`link\0${relativePath}\0${fs.readlinkSync(absolutePath)}\0`);
+      } else {
+        throw new Error(`unsupported Skill entry: ${absolutePath}`);
+      }
+    }
+  }
+
+  visit(rootDir, "");
+  return hash.digest("hex");
+}
+
 function installSkillLink(sourceDir, targetDir) {
-  // Purpose: install one managed Skill symlink; Input: source and target directories; Output: none; Side effects: creates or replaces the target link.
+  // Purpose: install one preflight-approved Skill symlink; Input: source and target directories; Output: install status; Side effects: replaces an existing approved target.
   ensureParent(targetDir);
-  if (fs.existsSync(targetDir)) {
-    if (fs.lstatSync(targetDir).isSymbolicLink() && sameRealPath(targetDir, sourceDir)) {
+  const stat = lstatPath(targetDir);
+  if (stat) {
+    if (stat.isSymbolicLink() && resolvedLinkTarget(targetDir) === path.resolve(sourceDir)) {
       return "updated";
     }
-    return "skipped";
+    if (stat.isSymbolicLink()) {
+      fs.unlinkSync(targetDir);
+    } else {
+      fs.rmSync(targetDir, { recursive: true, force: true });
+    }
   }
   const type = process.platform === "win32" ? "junction" : "dir";
   fs.symlinkSync(sourceDir, targetDir, type);
-  return "installed";
+  return stat ? "updated" : "installed";
 }
 
 function copyDir(sourceDir, targetDir) {
@@ -49,53 +100,90 @@ function readOwnershipMarker(markerPath) {
 }
 
 function installSkillCopy(sourceDir, targetDir, metadata) {
-  // Purpose: install a managed Skill copy with ownership metadata; Input: source, target, and marker metadata; Output: none; Side effects: replaces target files.
-  if (fs.existsSync(targetDir)) {
-    const marker = path.join(targetDir, ".hello-scholar-install.json");
-    if (!fs.existsSync(marker)) {
-      return "skipped";
+  // Purpose: install one preflight-approved Skill copy and its baseline; Input: source, target, and ownership metadata; Output: install status; Side effects: replaces an existing approved target.
+  const stat = lstatPath(targetDir);
+  if (stat) {
+    if (stat.isSymbolicLink()) {
+      fs.unlinkSync(targetDir);
+    } else {
+      fs.rmSync(targetDir, { recursive: true, force: true });
     }
-    const existingMetadata = readOwnershipMarker(marker);
-    if (!existingMetadata || existingMetadata.tool !== metadata.tool) {
-      return "skipped";
-    }
-    fs.rmSync(targetDir, { recursive: true, force: true });
   }
   fs.mkdirSync(path.dirname(targetDir), { recursive: true });
   copyDir(sourceDir, targetDir);
+  const baselineDigest = directoryDigest(sourceDir);
   fs.writeFileSync(
-    path.join(targetDir, ".hello-scholar-install.json"),
-    `${JSON.stringify(metadata, null, 2)}\n`,
+    path.join(targetDir, INSTALL_MARKER),
+    `${JSON.stringify({ ...metadata, baselineDigest }, null, 2)}\n`,
     "utf8"
   );
-  return "installed";
+  return stat ? "updated" : "installed";
+}
+
+function inspectSkillTarget(targetDir, sourceDir, tool) {
+  // Purpose: classify one Skill target before any install mutation; Output: absent, managed-current, managed-clean, managed-conflict, or unowned with a concrete reason.
+  const stat = lstatPath(targetDir);
+  if (!stat) {
+    return { state: "absent" };
+  }
+  const expectedSource = path.resolve(sourceDir);
+  if (stat.isSymbolicLink()) {
+    const actualSource = resolvedLinkTarget(targetDir);
+    return actualSource === expectedSource
+      ? { state: "managed-current", kind: "link" }
+      : { state: "unowned", reason: `link points to ${actualSource}` };
+  }
+  if (!stat.isDirectory()) {
+    return { state: "unowned", reason: "target is not a directory or symbolic link" };
+  }
+
+  const markerPath = path.join(targetDir, INSTALL_MARKER);
+  const metadata = readOwnershipMarker(markerPath);
+  if (
+    !metadata
+    || metadata.tool !== tool
+    || metadata.mode !== "copy"
+    || typeof metadata.source !== "string"
+    || path.resolve(metadata.source) !== expectedSource
+  ) {
+    return { state: "unowned", reason: "copy ownership marker does not match this tool and source" };
+  }
+  const actualDigest = directoryDigest(targetDir);
+  if (typeof metadata.baselineDigest !== "string") {
+    return {
+      state: "managed-conflict",
+      kind: "copy",
+      actualDigest,
+      reason: "copy has no installation baseline",
+    };
+  }
+  if (actualDigest !== metadata.baselineDigest) {
+    return {
+      state: "managed-conflict",
+      kind: "copy",
+      actualDigest,
+      reason: "copy differs from its installation baseline",
+    };
+  }
+  return { state: "managed-clean", kind: "copy", actualDigest };
 }
 
 function uninstallSkillTarget(targetDir, sourceDir, tool) {
   // Purpose: remove only a provably owned Skill target; Input: target, expected source, and tool; Output: removal status; Side effects: may delete owned link or copy.
-  if (!fs.existsSync(targetDir)) {
+  const inspected = inspectSkillTarget(targetDir, sourceDir, tool);
+  if (inspected.state === "absent") {
     return "skipped";
   }
-
+  if (inspected.state === "unowned" || inspected.state === "managed-conflict") {
+    return "skipped";
+  }
   const stat = fs.lstatSync(targetDir);
   if (stat.isSymbolicLink()) {
-    if (sameRealPath(targetDir, sourceDir)) {
-      fs.rmSync(targetDir, { recursive: true, force: true });
-      return "removed";
-    }
-    return "skipped";
-  }
-
-  const marker = path.join(targetDir, ".hello-scholar-install.json");
-  if (!fs.existsSync(marker)) {
-    return "skipped";
-  }
-  const metadata = readOwnershipMarker(marker);
-  if (metadata && metadata.tool === tool) {
+    fs.unlinkSync(targetDir);
+  } else {
     fs.rmSync(targetDir, { recursive: true, force: true });
-    return "removed";
   }
-  return "skipped";
+  return "removed";
 }
 
 function lstatIfPresent(fileSystem, targetPath) {
@@ -338,7 +426,13 @@ function applyAtomicFileBatch({
 
 module.exports = {
   applyAtomicFileBatch,
+  directoryDigest,
+  hashValue,
+  inspectSkillTarget,
   installSkillCopy,
   installSkillLink,
+  lstatPath,
+  readOwnershipMarker,
+  resolvedLinkTarget,
   uninstallSkillTarget,
 };

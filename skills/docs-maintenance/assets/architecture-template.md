@@ -22,7 +22,7 @@ updated: YYYY-MM-DD
 
 ## 4. Current Technical Choices
 
-<List adopted technical choices and cite the source Spec for each important choice.>
+<List adopted technical choices and cite supporting code, tests, adoption evidence, or an existing Spec for each important choice. Do not create a Spec merely to fill this section.>
 
 ## 5. Key Runtime Flows
 
@@ -42,4 +42,4 @@ updated: YYYY-MM-DD
 
 ## 9. Design Sources
 
-<List the Completed Specs that shaped this Architecture.>
+<Cite the sources supporting implemented and adopted facts. For a partially implemented Spec, identify the relevant revision and accepted implementation evidence; do not present its remaining design as current architecture.>

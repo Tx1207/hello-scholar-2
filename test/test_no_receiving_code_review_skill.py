@@ -14,7 +14,6 @@ EXPECTED_RETIRED_FILES = {
     "SKILL.md",
     "SKILL.zh_CN.md",
 }
-AGENTS_MD = REPO_ROOT / "AGENTS.md"
 DISCOVERY_SCRIPT = """
 const path = require('node:path');
 const { discoverSkills } = require(path.join(process.argv[1], 'src', 'skill-discovery.js'));
@@ -39,16 +38,6 @@ class NoReceivingCodeReviewSkillTests(unittest.TestCase):
         for relative_path in EXPECTED_RETIRED_FILES:
             self.assertFalse((RETIRED_DIR / relative_path).exists())
         self.assertNotIn("receiving-code-review", discovered_skill_names())
-
-    def test_agents_keeps_fact_checking_validation_and_communication_rules(self) -> None:
-        agents = AGENTS_MD.read_text(encoding="utf-8")
-        for phrase in (
-            "ground implementation choices in project facts",
-            "behavior, boundaries, and regression risks that can actually fail",
-            "Report completed work, evidence, scope of impact, and facts that still need confirmation.",
-        ):
-            self.assertIn(phrase, agents)
-
 
 if __name__ == "__main__":
     unittest.main()

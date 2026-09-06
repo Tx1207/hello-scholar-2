@@ -8,8 +8,8 @@
 | `--help`, import check, config parse, unit test, static check, or smoke test with no retained evidence | No record | Engineering evidence is not a Run |
 | A local smoke test or tiny eval has no formal, cost, or retained-evidence signal | No record | Small low-risk experiments run directly and need no later backfill |
 | A full/baseline/release Benchmark or Eval, full training, expensive GPU/remote job, or retained predictions/results/checkpoints | Full record | Strong signals establish a formal evidence boundary before launch |
-| Query an existing Run's tmux, TensorBoard, latest loss, or known checkpoints | No record | Read-only unless it reveals a material event |
-| Discover completion, OOM, a new artifact path, or a citeable metric on an existing Run | Append event | Preserve the durable change in the same identity |
+| Query an existing Run's tmux, TensorBoard, latest loss, or known checkpoints | No record | Report discoveries without expanding a read-only request |
+| Discover completion, OOM, a new artifact path, or a citeable metric while authorized to maintain an existing Run | Append event | Preserve the durable change in the same identity within existing write authorization |
 | A completed valid eval underperforms baseline | Full record or Append event | Keep `completed` and make a non-adoption decision |
 | A report becomes durable research material | Full record | Preserve input, upstream, and derived-artifact provenance |
 
@@ -31,7 +31,7 @@ Execute the documented command once through a capture method that preserves sepa
 
 A developer asks to run a local 20-example smoke eval to check that a config parses and the pipeline reaches inference. No baseline/release claim, expensive GPU or remote work, retained output, acceptance evidence, production data, or irreversible operation is present.
 
-Run it directly. State `No record` because it is a low-risk small experiment. Its observation remains temporary; do not create a Record at session close or before later discussion. If formal evidence is later needed, run a subsequent formal experiment with a prelaunch Record.
+Run it directly without automatically creating a Record. If the user later asks to preserve that experiment, follow the retrospective guidance in [status-and-fields.md](status-and-fields.md); recording existing evidence does not require another execution.
 
 ## 3. Unclear safety fact
 
@@ -39,11 +39,11 @@ A request says “run the full evaluation against production data” but does no
 
 ## 4. Existing Run read-only query
 
-An existing `runs/20260803-0900-baseline-eval-s0/record.md` already records its logs and TensorBoard URL. For “Show the latest loss” or “Is tmux still alive?”, read the existing evidence and answer. Do not create another Run or write an event unless the query discovers a material milestone, error, terminal state, or user-requested durable snapshot.
+An existing `runs/20260803-0900-baseline-eval-s0/record.md` already records its logs and TensorBoard URL. For “Show the latest loss” or “Is tmux still alive?”, read the existing evidence and answer. A newly discovered milestone, error, or terminal state does not turn a read-only query into permission to write. Append it only when existing Run-maintenance authorization covers the write or the user requests a durable update; otherwise report the fact without creating or changing a Record.
 
 ## 5. Same-minute identity collisions
 
-For a same identity, inputs, key configuration, and user intent, append an event to the existing `runs/20260803-1100-router-ablation-s0/record.md`.
+When authorized to maintain a Run, append a newly observed event from the same actual process or remote job, with matching identity, inputs, and key configuration, to the existing `runs/20260803-1100-router-ablation-s0/record.md`. A new execution of the command is a new Run even when its arguments are identical.
 
 For a different identity that collides in that minute, keep the existing directory untouched and allocate the first unused suffix:
 
@@ -82,7 +82,7 @@ The Key Results, Observations, and Conclusion explain the comparison and caveats
 
 ## 8. Derived report provenance
 
-Before creating a durable comparison report from retained predictions, recover their upstream provenance in a Run Record. This records the retained inputs rather than backfilling a disposable probe. In the report Run, list:
+Before creating a durable comparison report from retained predictions, recover their upstream provenance in a Run Record. In the report Run, list:
 
 - Input artifacts: `outputs/model_a_predictions.jsonl`; `outputs/model_b_predictions.jsonl`
 - Upstream Run ID: `20260803-1300-model-inference-s0`

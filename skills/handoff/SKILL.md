@@ -1,22 +1,12 @@
 ---
 name: handoff
-description: Use when the user explicitly asks to save a session handoff so a fresh agent can continue the work.
-argument-hint: "What will the next session be used for?"
+description: Save the minimum durable context a future session needs when the user asks for a handoff or work must continue across sessions.
 ---
 
-Write a handoff document summarising the current conversation so a fresh agent can continue the work. Save it under the current task's project or worktree root at `hello-scholar/handoffs/YYYY-MM-DD-<topic>-handoff.md`. A Handoff does not belong to the Spec Bundle or a generated Index; do not create `hello-scholar/memory/` for a Handoff.
+# Handoff
 
-Choose the handoff template by repository language preference:
-- Chinese default: `assets/handoff-template.zh_CN.md`
-- Otherwise: `assets/handoff-template.md`
-- Do not infer template language from the task prompt when the repository default language is explicit.
+Write `hello-scholar/handoffs/YYYY-MM-DD-<topic>-handoff.md` under the current project root. Use [assets/handoff-template.md](assets/handoff-template.md) for English or [assets/handoff-template.zh_CN.md](assets/handoff-template.zh_CN.md) for Chinese, following the language requested for the task and otherwise the project's established language.
 
-Use the selected template's headings as written. Fill user-readable prose in that same template language. Keep paths, URLs, commands, code identifiers, skill names, and technical terms as written.
+Capture only state that a fresh agent cannot reliably recover from the Spec, acceptance evidence, code, tests, Git, Records, issues, or other linked artifacts. Include the current objective, completed and remaining work, unresolved decisions, blockers and risks, relevant paths or commands, and the next useful action. State whether listed verification was actually run and its result.
 
-Do not duplicate content already captured in other artifacts (PRDs, plans, ADRs, issues, commits, diffs). Reference them by path or URL instead.
-
-Redact any sensitive information, such as API keys, passwords, or personally identifiable information.
-
-If the user passed arguments, treat them as a description of what the next session will focus on and tailor the doc accordingly.
-
-After a successful save, tell the user the exact Handoff path and, in one sentence, what the next session can continue. Reference the document rather than reproducing its contents.
+Do not copy entire durable documents, conversation transcripts, secrets, credentials, or personal data. A Handoff is not a Spec Bundle member and is not indexed. After writing, report its exact path and what the next session can resume.

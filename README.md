@@ -39,7 +39,7 @@ hello-scholar 是一套安装到 **Claude Code** 或 **Codex** 中的项目协�
 
 - **直接处理日常修改**：局部 Bug、文案、格式、单个测试和低风险重构不强制创建复杂文档。
 - **先设计再实现重要功能**：公共接口、数据格式、模块职责或高风险行为变化会先形成可审阅的设计。
-- **保存项目决策**：用不同文档分别记录当前系统、目标设计、实施策略和执行步骤，避免重要决定只留在聊天记录里。
+- **保存项目决策**：用不同文档分别记录当前系统、目标设计和验收证据，避免重要决定只留在聊天记录里。
 - **记录正式实验**：为训练、Benchmark、Eval 和其他需要保留证据的运行记录命令、输入、环境、结果和结论。
 - **减少“说完成但没验证”**：要求 Agent 使用当前工作树中的测试或其他可观察证据支持结论。
 - **同时支持 Claude Code 和 Codex**：安装器会为不同工具写入对应的项目规则和 Skill 目录。
@@ -90,9 +90,11 @@ hello-scholar help
 node bin/hello-scholar.js help
 ```
 
+需要独立安装包时，在本仓库运行 `npm pack --pack-destination /tmp`，再运行 `npm install -g /tmp/hello-scholar-0.1.0.tgz --offline --ignore-scripts --no-audit --no-fund`。包包含 CLI、完整技能资源和通用规则，不包含开发文档；从包安装后无须保留打包源码。
+
 ### 3. 安装到你的项目
 
-进入你真正要开发的项目目录，然后选择正在使用的工具。
+进入你真正要开发的项目目录，然后选择正在使用的工具。Git 项目以仓库根目录为安装目标，否则使用当前目录。
 
 Claude Code：
 
@@ -109,6 +111,8 @@ hello-scholar install codex
 ```
 
 使用一种工具时只需执行对应命令，不必同时安装两套。如果同一个项目确实同时使用 Claude Code 和 Codex，可以分别安装。
+
+试用尚未发布的本地改版时，可在目标项目副本中运行 `node /path/to/hello-scholar/bin/hello-scholar.js install codex --mode copy`，路径替换为实际源码目录，Claude Code 则将 `codex` 换成 `claude`。未安装全局 CLI 时，本页命令中的 `hello-scholar` 均可替换为这个 `node` 入口。
 
 ### 4. 发出第一个请求
 
@@ -152,16 +156,16 @@ Codex：
 <project-root>/.agents/skills/<skill-name>
 ```
 
-安装本身不会自动创建 Spec、Plan、Tasks、Architecture 或实验 Record。只有后续任务确实需要时，Agent 才会提出或创建相应文档。
+安装默认提供全部 9 个 Skills，不会自动创建 Spec、Architecture、Handoff 或实验 Record。只有后续任务确实需要时，Agent 才会提出或创建相应文档。新工作不创建 Plan/Tasks。
 
-默认使用 `link` 模式，目标项目中的 Skill 会链接到本仓库。使用这种模式后，需要保留当前 hello-scholar 仓库及其路径；移动或删除源仓库会使链接失效。需要让某个项目拥有独立副本，或者不希望它依赖源仓库路径时，可以改用 `copy`：
+默认使用 `link` 模式，目标项目中的 Skill 会链接到当前 CLI 来源的 `skills/`（源码仓库或已安装包）。使用这种模式后，需要保留该来源及其路径；移动或删除会使链接失效。需要让某个项目拥有独立副本时，可以改用 `copy`：
 
 ```bash
 hello-scholar install claude --mode copy
 hello-scholar install codex --mode copy
 ```
 
-重复安装时，如果已有对应的 hello-scholar 管理块，CLI 会先提醒你备份块内的手动修改。只有输入 `yes` 才会替换该管理块。
+升级时先更新 CLI 来源，再在目标项目重复安装，更新规则块和当前全部 Skills。规则块与当前模板一致时直接重装，不同时先确认替换；技能中的用户修改或未知归属也会在写入前报告。安装器不在 `.agents/` 或 `.claude/` 根目录保存安装记录。省略 `--mode` 始终使用 `link`，不会沿用上次的 `copy`；没有单独的 `update` 命令。
 
 ## hello-scholar 如何处理不同任务
 
@@ -173,7 +177,7 @@ hello-scholar install codex --mode copy
 理解问题 → 修改代码 → 运行验证 → 报告结果
 ```
 
-这类工作通常不创建或修改 Spec、Plan、Tasks、Record 或 Architecture。
+这类工作通常不创建或修改 Spec、Record 或 Architecture。
 
 ### 重要改动：先把设计说清楚
 
@@ -184,14 +188,12 @@ hello-scholar install codex --mode copy
       ↓
 确认目标设计（Spec）
       ↓
-确认实施策略（Plan）
-      ↓
-拆成可验证步骤（Tasks）
-      ↓
 实施并测试
+      ↓
+保存当前验收证据
 ```
 
-每个阶段都有独立审核边界。批准设计不等于批准实施；批准 Plan 也不等于立即修改代码。你可以明确要求 Agent 停在任何一步。
+你可以明确要求 Agent 停在设计或审核阶段。明确要求实施后，Agent 自行安排步骤并持续完成相关验证，不另设 Plan/Tasks 审批；只有影响结果的关键选择未定或下一步超出授权时才询问。
 
 ### 正式实验：先记录，再运行
 
@@ -234,7 +236,7 @@ hello-scholar install codex --mode copy
 ### 实施已经批准的任务
 
 ```text
-继续当前已批准 Tasks 中第一个未完成且没有依赖阻塞的任务。完成验证后更新执行状态。
+按 SPEC-012 的当前版本继续实现尚未满足的验收要求。完成相关验证后，在 Spec 中更新结论和证据。
 ```
 
 ### 运行需要保留证据的实验
@@ -251,14 +253,12 @@ hello-scholar install codex --mode copy
 
 ## 核心文档分别解决什么问题
 
-复杂工作中，hello-scholar 使用五类核心文档保存不同事实。你不需要在第一次使用前记住它们；Agent 会在需要时说明为什么要创建或修改某一类文档。
+复杂工作中，hello-scholar 使用三类核心文档保存不同事实。你不需要在第一次使用前记住它们；Agent 会在需要时说明为什么要创建或修改某一类文档。
 
 | 文档 | 用普通语言来说 | 位置 |
 | --- | --- | --- |
 | Current Architecture | 项目现在已经实现并正式采用了什么 | `hello-scholar/architecture.md` |
 | Spec | 最终要实现什么、哪些边界不能破坏、怎样算完成 | `hello-scholar/specs/<topic>/SPEC-.../spec.md` |
-| Plan | 准备如何实现已经接受的设计 | 与 Spec 同一目录的 `plan.md` |
-| Tasks | 按什么顺序执行，每一步如何验证 | 与 Spec 同一目录的 `tasks.md` |
 | Record | 一次正式实验实际如何运行、得到什么结果 | `runs/<run-id>/record.md` |
 
 一个项目通常按以下结构组织：
@@ -276,9 +276,7 @@ hello-scholar install codex --mode copy
 │       ├── INDEX.md
 │       └── <topic>/
 │           └── SPEC-001-<design-name>/
-│               ├── spec.md
-│               ├── plan.md
-│               └── tasks.md
+│               └── spec.md
 │
 └── runs/
     ├── INDEX.md
@@ -290,9 +288,9 @@ hello-scholar install codex --mode copy
         └── checkpoints/
 ```
 
-`hello-scholar/handoffs/` 用于按需交接会话上下文，不属于五类核心文档，也不进入 Spec 或 Run Index。
+以上路径相对于目标项目根目录。`hello-scholar/handoffs/` 用于按需交接现有文档、代码和 Git 无法恢复的会话上下文，不进入 Spec 或 Run Index。
 
-每次文档修改只处理自己的职责：修改 Spec 不会顺便重写 Plan，修改 Plan 不会顺便重写 Tasks，实验结果也不会自动改变设计。当 Spec Revision 变化后，Plan 或 Tasks 显示为 `Stale` 是正常状态，表示它们需要在继续实施前重新核对。
+每次文档修改只处理自己的职责，实验结果不会自动改变设计。设计变化后，需重新核对受影响的验收证据。Record 只承载正式科研实验，不作为普通开发日志。
 
 `INDEX.md` 是 CLI 生成的导航文件，不应手工维护：
 
@@ -311,7 +309,7 @@ hello-scholar docs sync
 ```text
 Current Architecture
         ↓
-Spec → Plan → Tasks
+Spec（目标、设计和验收要求）
         ↓
 主 Agent 实施
         ↓
@@ -323,71 +321,64 @@ Architecture Maintenance（仅在系统事实变化时）
 ```
 
 1. Agent 读取相关 Current Architecture、代码和测试，理解当前系统与约束。
-2. Spec 明确目标、边界、行为、取舍和验收条件；用户接受当前 Spec 后再规划实施。
-3. Plan 基于 Accepted Spec 描述高层技术策略；用户批准后再拆分 Tasks。
-4. Tasks 将 Plan 拆成可独立执行、可验证的步骤；用户批准并明确要求实施后才开始执行。
-5. 主 Agent 按依赖直接修改真实代码、运行验证并更新任务状态。
-6. 需要长期保存正式实验事实时建立 Record；普通测试不创建 Record。
-7. 在 Bundle 结束或你明确要求时，检查代码、测试和文档是否真正实现了 Spec。
-8. 只有当前系统的结构性事实已经变化并正式采用时，才独立更新 Current Architecture。
+2. Spec 明确目标、边界、行为、取舍和验收条件；只有设计请求时交付设计，不实施。
+3. 用户明确要求实施后，主 Agent 自行安排步骤，修改代码、运行验证并更新 Spec 验收证据。
+4. 需要长期保存正式实验事实时建立 Record；普通测试不创建 Record。
+5. 完成前核对当前验收证据；用户要求对照 Spec 审计时，使用 `converge-to-spec` 检查缺口。
+6. 当前授权实施改变了已采用的系统结构性事实时，同步更新 Current Architecture。
 
 低风险、可丢弃的参数扫描、模型或 Prompt 对比和快速可行性验证，可以先探索再决定是否形成正式设计：
 
 ```text
-Quick Experiment → Analyze → Spec / Plan / Tasks（按需）
+Quick Experiment → Analyze → Spec（按需）
 ```
 
 探索应有时间和成本边界，不应修改生产数据、执行不可逆操作、改变公共 API 或持久化格式。正式、昂贵、长时间或用于验收的实验，应在启动前建立 Record。
 
 ## Skills 在工作流中的位置
 
-Skills 是 Agent 在不同阶段使用的工作说明，不是用户必须逐个执行的命令。
+Skills 是 Agent 在不同阶段使用的工作说明，不是用户必须逐个执行的命令。全部 9 个技能默认安装，按当前任务语义选择，不要求用户点名；自动触发不扩大用户授权。
 
 | 阶段 | Skill / Owner | 负责什么 |
 | --- | --- | --- |
-| 任务判断 | `using-helloscholar` | 判断工作适合直接修改、设计、实施、实验还是文档维护。 |
-| 设计讨论 | `brainstorming` | 澄清目标、约束、风险、接口、数据流和验收条件。 |
-| Spec 归属 | `manage-specs` | 判断应该更新已有 Spec、创建独立 Spec，还是创建替代旧设计的 Successor Spec。 |
-| 实施策略 | `writing-plans` | 从 Accepted Spec 形成高层实施策略。 |
-| 任务拆分 | `generating-tasks` | 将 Approved Plan 拆成可独立执行和验证的 Tasks。 |
-| 实施 | 主 Agent | 按 Tasks 的依赖修改代码并验证结果。 |
+| 任务判断与设计讨论 | 主 Agent | 理解目标、约束、风险和方案；需要持久设计时使用 Spec。 |
+| Spec 管理 | `manage-specs` | 创建、修订或替代 Spec，保存设计决定、约束和验收要求。 |
+| 实施 | 主 Agent | 根据用户目标和 Spec（需要时）修改代码并验证结果。 |
 | 正式运行 | `record-experiment` | 记录正式实验、Benchmark、Eval 和训练的运行事实。 |
-| 完成检查 | `converge-to-spec` | 检查 Spec、Plan、Tasks、代码、测试和 Record 是否一致。 |
+| 完成检查 | `converge-to-spec` | 对照指定 Spec Revision，只读审计实现和验收缺口。 |
 | 文档维护 | `docs-maintenance` | 检查文档、生成 Index、维护 Architecture 或恢复可审核状态。 |
 
-以下能力只在你明确需要时使用：
+以下技能也默认安装，在任务需要对应能力时使用：
 
 | Skill | 适用场景 |
 | --- | --- |
 | `takeoff` | 从更高层重新判断目标、问题边界和方向。 |
 | `grilling` | 从反对者视角挑战方案、假设、反例和代价。 |
-| `crash-audit` | 检查答案、Spec、Plan 或决策中的不确定性和遗漏。 |
+| `crash-audit` | 检查答案、Spec 或决策中的不确定性和遗漏。 |
 | `landing` | 把较大的方向压缩成可验证、可停止的最小范围。 |
-| `test-driven-development` | 你或 Approved Task 明确要求完整 Red–Green–Refactor。 |
-| `using-git-worktrees` | 你或 Approved Task 明确要求隔离 Worktree。 |
 | `handoff` | 会话中断、上下文切换或需要交给其他协作者。 |
+
+普通 TDD、Git worktree、需求讨论和任务规划由模型直接完成，不再单设运行时 Skill。`takeoff` 和 `landing` 可以顺序使用，`grilling` 不强制子 Agent 或 tracker。
 
 ## Current Architecture 如何维护
 
 `hello-scholar/architecture.md` 描述**当前已经实现并正式采用的系统事实**，不是未来设计草案。
 
-开始较大改动前，Agent 会读取与任务相关的 Architecture，理解当前模块职责、运行流程、技术选择、产物位置和约束。Draft Spec、未完成 Plan、未采用 Prototype 和聊天中的未来设想不应提前写入 Architecture。
+开始较大改动前，Agent 会读取与任务相关的 Architecture，理解当前模块职责、运行流程、技术选择、产物位置和约束。Draft Spec、未采用 Prototype 和聊天中的未来设想不应提前写入 Architecture。
 
-Architecture 更新是一个独立操作：
+Architecture 根据已核实的当前事实更新：
 
 ```text
-当前代码 + Git + 已完成 Bundle + 有效 Record
+当前代码 + Git + Spec 验收证据 + 有效 Record
         ↓
-Architecture Proposal
+核对已实现并采用的系统事实
         ↓
-用户审核当前文件和 Proposal
-        ↓
-批准后更新 hello-scholar/architecture.md
+在用户授权范围内更新 hello-scholar/architecture.md
 ```
 
-Proposal 阶段不会写文件。Agent 会说明事实来源、需要增加或修改的内容、应删除的旧表述、未解决事实和预计写入范围。只有你明确批准后，Agent 才会更新 Architecture。
+只要求分析或提出更新方案时不写文件。用户明确要求维护，或已授权实施实质改变了结构、模块职责、公共契约或持久位置时，可以在同一授权内更新，不另设必经审批。
 
-因此，Architecture 不会因为一个 Task、一次 Commit 或一次普通测试自动更新，也不会阻塞日常开发。
+因此，Architecture 不会因为一次 Commit 或一次普通测试自动更新，也不会阻塞日常开发。
 
 ## CLI 命令参考
 
@@ -440,15 +431,15 @@ npm uninstall -g hello-scholar
 ### `link`：默认，适合统一更新
 
 - 目标项目中的 Skill 目录是软链接；
-- 修改 hello-scholar 源仓库中的 Skill 后，使用同一源仓库链接的项目会看到更新；
-- 直接从目标项目的链接路径编辑 Skill，实际也会修改源仓库；
+- 来源可以是源码仓库或已安装包；来源 Skill 改动后，使用同一来源链接的项目会看到更新；
+- 直接从目标项目的链接路径编辑 Skill，实际也会修改来源；已写入的规则文本仍需重装更新；
 - 适合个人或团队统一维护一套 Skills。
 
 ### `copy`：适合项目独立定制
 
 - 目标项目得到一份独立 Skill 副本；
 - 项目内修改不会影响 hello-scholar 源仓库；
-- 每个副本包含 `.hello-scholar-install.json`，供卸载时确认所有权；
+- 每个副本包含 `.hello-scholar-install.json`，用于识别归属及安装后修改；
 - 适合不同项目需要长期维护不同规则的情况。
 
 不确定时使用默认的 `link`。如果你不希望一个项目中的 Skill 修改影响其他项目，使用 `copy`。
@@ -471,17 +462,19 @@ hello-scholar 不会覆盖已有的 `AGENTS.md` 或 `CLAUDE.md`。安装器会�
 <!-- HELLO-SCHOLAR:END claude -->
 ```
 
+两种工具都从包根 `AGENTS.md` 读取完整通用规则，写入目标普通文本文件；源码 `CLAUDE.md` 链接到同一正文，安装包不依赖该链接。管理块外的用户内容原样保留。
+
 项目内卸载只会删除：
 
-- 对应工具的 hello-scholar 管理块；
-- 能证明由当前 hello-scholar checkout 拥有的 Skill 目录。
+- 对应工具中与当前模板一致的 hello-scholar 管理块；
+- 能证明由 hello-scholar 管理且未修改的 Skill 目录或链接。
 
 它不会删除：
 
 - 管理块之外的用户内容；
 - 无法证明属于 hello-scholar 的同名 Skill；
 - `hello-scholar/architecture.md`；
-- Spec Bundle；
+- Spec 及其历史材料；
 - Handoff；
 - 根目录 `runs/` 中的实验记录。
 
@@ -489,7 +482,7 @@ hello-scholar 不会覆盖已有的 `AGENTS.md` 或 `CLAUDE.md`。安装器会�
 
 ## 项目偏好
 
-可以在项目的 `AGENTS.md` 或 `CLAUDE.md` 中记录长期偏好，例如当前项目语言、表达方式、测试命令、依赖选择和文档位置。
+可以在项目的 `AGENTS.md` 或 `CLAUDE.md` 管理块之外记录长期偏好，例如当前项目语言、表达方式、测试命令、依赖选择和文档位置。通用规则保留 hello-scholar 最终回复模板，不强制业务项目使用中文或特定测试命令。
 
 示例：
 
@@ -513,12 +506,12 @@ hello-scholar 不会覆盖已有的 `AGENTS.md` 或 `CLAUDE.md`。安装器会�
 可以将下面的请求发送给 Claude Code 或 Codex：
 
 ```text
-请先运行 `npm root -g`，并读取其输出目录下的 `hello-scholar/docs/migration/document-model-v2.md`。如果文件不存在，请停止并报告，不要猜测其他路径。
+请先读取 hello-scholar 源码目录下的 `docs/migration/document-model-v2.md`，源码位置为 <填写源码目录>。
 读取后，严格按该文件的 Document Model v2 流程迁移当前项目文档：先只读盘点并输出逐项 Mapping Proposal，等待我批准后仅执行获批行；不要自动移动、删除、双写或创建迁移脚本。当前版本没有 `docs migrate` 命令。文件夹数量过多时，先询问我是否使用 subagent 加速处理。
 完成前确认每个获批目标位于 canonical v2 path，相关 `legacy-path` notices 已消失，或已在 Mapping Proposal 中明确获批保留。
 ```
 
-这段请求会从全局 npm 安装目录读取迁移说明，不会把 hello-scholar 源文件复制到目标项目。
+这段请求从源码目录读取迁移说明，不会把 hello-scholar 源文件复制到目标项目。压缩包不包含开发文档，仅有安装包时可查阅[仓库在线迁移说明](https://github.com/Tx1207/hello-scholar/blob/main/docs/migration/document-model-v2.md)。历史 Plan/Tasks 中的有效约束并入 Spec、完成事实并入验收证据，不恢复旧执行流程。
 
 完整边界见：[Document Model v2 迁移说明](docs/migration/document-model-v2.md)。
 
@@ -558,11 +551,11 @@ skills/<skill-name>/SKILL.md
 
 ### 为什么 Agent 有时会要求审核？
 
-设计、实施策略、任务拆分、正式实验和 Architecture 更新会影响不同范围。分别审核可以防止一次同意被误解为允许后续所有操作。
+关键选择无法从项目事实确定，或下一步涉及新的授权、高风险或不可逆操作时，需要你决定。已经明确要求实施的任务不再按 Plan/Tasks 分阶段审批。
 
 ### 为什么 Plan 或 Tasks 显示为 `Stale`？
 
-这表示上游 Spec 已经修改，旧 Plan 或 Tasks 可能不再完全符合当前设计。文件没有丢失，但继续实施前需要重新核对。
+这是旧版的执行状态提示。当前版本不再生成或依赖 Plan/Tasks；已有文件作为历史材料保留。继续旧任务时先核对其中的独有约束，并以当前 Spec 和验收证据判断进度。
 
 ### `link` 和 `copy` 应该选哪个？
 
@@ -578,13 +571,15 @@ hello-scholar docs check
 
 ## 开发
 
+维护本仓库请阅读 [CONTRIBUTING.md](CONTRIBUTING.md)；根 `AGENTS.md` 和 `CLAUDE.md` 保持为安装到其他项目的通用规则。
+
 运行完整测试：
 
 ```bash
 npm test
 ```
 
-`npm test` 会同时运行 Node CLI 测试和 Python unittest。
+`npm test` 会同时运行 Node CLI 测试和 Python unittest；可用 `npm run test:js`、`npm run test:py` 分别运行，用 `npm run docs:check` 检查文档。付费模型评估和远程科研运行不混入普通测试。Skill 维护说明位于 `docs/maintenance/`。
 
 ## 参考来源
 
@@ -601,16 +596,4 @@ hello-scholar 的设计参考了以下项目和规范：
 
 ## 设计与迁移资料
 
-下一代文档驱动框架的设计资料：
-
-```text
-docs/specs/next_generation_skill/hello-scholar文档驱动 AI 科研开发框架 PRD.md
-docs/specs/next_generation_skill/hello-scholar文档驱动 AI 科研开发框架执行plan.md
-docs/migration/document-model-v2.md
-```
-
-CLI 安装器的实现计划：
-
-```text
-docs/plan/hello-scholar-cli-install-plan.md
-```
+[项目改进进度](docs/need_skills/spec-driven-skill-design.md) · [旧项目迁移说明](docs/migration/document-model-v2.md)

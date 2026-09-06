@@ -5,3 +5,4 @@
 /runs/
 /.claude
 /test/__pycache__/
+/test/quality-cases/**/__pycache__/

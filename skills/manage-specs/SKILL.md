@@ -1,87 +1,40 @@
 ---
 name: manage-specs
-description: Classify a design request into one stable Spec identity. Use before creating, revising, or replacing a Spec, or when another design Skill needs the canonical Spec owner.
+description: Create, revise, or replace a durable project Spec when a design decision, interface, invariant, or acceptance contract needs a stable owner.
 ---
 
 # Manage Specs
 
-Own **classification** of one design request into one stable Spec identity. Return exactly one of:
+Maintain a complete, reviewable Spec when the task calls for durable design. A request only to discuss options stays a discussion. Capture settled decisions and material open questions; an unsettled design can be saved as a draft.
 
-- `Update Existing Spec`
-- `Create Independent Spec`
-- `Create Successor Spec`
-- `Need Human Classification`
+## Choose the owner
 
-The result names the candidate Spec(s), evidence, and the next confirmation gate. This Skill owns Spec identity and revision maintenance; solution design, Spec acceptance, Plans, Tasks, and implementation belong to their respective owners.
+Inspect current Architecture, relevant code and tests, `hello-scholar docs check`, Indexes when available, and plausible Specs. Select the simplest supported branch:
 
-## 1. Establish the document facts
+- **Revise** when one Spec already owns the same capability and lifecycle.
+- **Create** when the capability has an independent value, acceptance boundary, and lifecycle.
+- **Replace** when the target design will supersede an adopted contract or implementation model.
 
-1. Confirm the project root and run:
-   ```sh
-   hello-scholar docs check
-   ```
-   If the check reports stale or outdated generated Indexes, run `hello-scholar docs sync` before reading candidates.
-2. Stop on a structural error and report the diagnostics.
-3. Read the global Spec Index, the relevant Topic Index when it exists, and candidate `spec.md` files whose problem, goal, or ownership boundary may match. Read only the project facts needed to distinguish those candidates.
+Resolve the branch from project facts when one owner is clearly better. Ask one focused question only when multiple owners or material product choices remain equally plausible. For a new identity, read [assets/spec-identity.md](assets/spec-identity.md).
 
-**Completion:** the request has a bounded candidate set backed by current project facts.
+## Preserve the design
 
-## 2. Classify one identity
+Preserve the user decisions, relevant project facts, interfaces, invariants, implementation boundary, and observable acceptance. Record important alternatives and their rationale when they explain the chosen design. Distinguish open questions from accepted decisions rather than silently deciding them while writing.
 
-| Classification | Evidence | Result before any write |
-| --- | --- | --- |
-| `Update Existing Spec` | One Spec already owns the same problem, capability, and lifecycle. | Name that Spec and its shared boundary. |
-| `Create Independent Spec` | The capability is independently valuable and can be approved, implemented, validated, and rolled back independently. | State the independent lifecycle facts and propose one canonical path. |
-| `Create Successor Spec` | The design replaces an active implementation model or removes a required store, protocol, or lifecycle boundary. | Name the replaced Spec, the historical boundary, and the successor's canonical path. |
-| `Need Human Classification` | Multiple owners remain equally plausible after reading local evidence. | Present the competing boundaries and one identity decision. |
+Use `schema: 1` and the canonical path:
 
-Alternatives for one problem remain in one candidate Spec's `Alternatives and Tradeoffs`; they are not separate identities.
-
-For `Create Independent Spec` or `Create Successor Spec`, read [`assets/spec-identity.md`](assets/spec-identity.md) before returning an identity. Use [`assets/spec-identity.zh_CN.md`](assets/spec-identity.zh_CN.md) when responding in Chinese. Complete its **Stable Identity Test**, then repeat the proposed full path in the confirmation request.
-
-**Completion:** the response contains one classification, concrete evidence, one complete path when creating an identity, and one confirmation gate or explicit stop.
-
-## 3. Apply the confirmed classification
-
-Proceed only when the reply unambiguously confirms the classification and exact identity proposed in Step 2.
-
-### Update Existing Spec
-
-- Read the current `spec.md` in full. Treat the complete current file as the **Baseline**, the user-approved decision or current upstream contract as the **Authority**, and this request as the **Delta**; a point not mentioned by the Delta remains in force.
-- Before writing, classify every Baseline decision and every Delta change as `Keep`, `Modify`, `Remove`, `Add`, or `Move`. `Keep` is the default. `Remove` requires an explicit decision, direct conflict, replacement, or dependency on removed content.
-- Reconcile the ledger into one complete current Spec. Keep its ID, Topic, Bundle path, and `created`; update affected interfaces, invariants, risks, and acceptance together, and remove residual references to discarded decisions.
-- For a semantic change, increment `revision`, set `status: draft`, update `updated`, and append one `Revision History` entry that summarizes the change without copying superseded prose.
-- A format-only correction keeps the revision unchanged.
-- Modify only that `spec.md`; existing Plan and Tasks may become stale.
-- Finish with a whole-file semantic conservation review: every Baseline item has one disposition, every Delta item is integrated, unaffected content remains, discarded content is absent, and every removal or broad rewrite has Authority.
-
-### Create Independent Spec
-
-- Read the matching template in `assets/`: use `spec-template.zh_CN.md` for a Chinese project, otherwise `spec-template.md`.
-- Create the confirmed path with `status: draft`, `revision: 1`, `supersedes: []`, and `superseded_by: null`.
-
-### Create Successor Spec
-
-- Create the confirmed draft as above and list the old ID in `supersedes`.
-- In the same transaction, update the old `spec.md`: point `superseded_by` to the new ID, record the semantic revision, and set an active owner to `superseded`.
-- Verify a reciprocal, non-self, acyclic relationship. This is the only multi-Spec write branch.
-
-### Need Human Classification
-
-Return the unresolved identity decision with zero project writes.
-
-**Completion:** every changed `spec.md` matches the confirmed branch and identity; no Plan, Tasks, Architecture, source, or Run changed.
-
-## 4. Validate and hand off
-
-After writing the Spec, run once:
-
-```sh
-hello-scholar docs sync
+```text
+hello-scholar/specs/<topic>/SPEC-NNN-<name>/spec.md
 ```
 
-Only the CLI rebuilds generated Indexes. Confirm the final diff contains the selected Spec transaction and generated Indexes.
+Start an unsettled design as `draft`. A user acceptance or an explicit request to implement that revision makes it `accepted` once material open decisions are resolved. Implementation progress does not add another status: keep `accepted` and record current evidence beside each stable `AC-NN`. Set `completed` only when all acceptance requirements for the current revision have current evidence.
 
-A new Spec and a semantic update remain `draft` until the user approves the complete Spec. Then stop at the next requested owner.
+For a semantic change, increment `revision`, update affected decisions and acceptance together, and preserve unaffected content. Evidence-only, formatting, date, or lifecycle updates do not increment the revision. Read the existing Spec in full before revising it.
 
-**Completion:** `docs sync` succeeds, generated Indexes are current, and every changed path belongs to the confirmed transaction.
+For a replacement, describe the intended predecessor in the draft, but do not invalidate the existing Spec yet. Write reciprocal `supersedes` and `superseded_by` links and mark the predecessor `superseded` only after the successor is implemented, accepted for use, and validated.
+
+Use [assets/spec-template.md](assets/spec-template.md) for a new English Spec or [assets/spec-template.zh_CN.md](assets/spec-template.zh_CN.md) for Chinese. Follow the language requested for the task, otherwise the target project or existing Spec. Existing Specs need not be rearranged merely to match a newer template.
+
+## Finish
+
+Inspect the changed Spec and use available checks whose side effects fit the current authorization. Run `hello-scholar docs sync` only when the CLI is available and its generated Index writes are authorized; otherwise report the skipped maintenance without blocking the Spec. Do not create `plan.md` or `tasks.md`. If implementation was requested, continue to implement and verify the accepted Spec under the same authorization.

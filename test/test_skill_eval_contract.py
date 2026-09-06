@@ -704,9 +704,6 @@ class SkillEvalContractTests(unittest.TestCase):
 
     def test_flattened_brainstorming_snapshot_allows_only_its_verified_path_rewrite(self) -> None:
         source = "skills/superpowers-skills/brainstorming"
-        expected = "b0c962894bd010354345b44cdb959b74a8cdb327152c60e642138c6e6afd2abf"
-        self.assertEqual(expected, sha256_historical_skill_snapshot(REPO_ROOT, source))
-
         with tempfile.TemporaryDirectory() as temp_name:
             root = Path(temp_name)
             skill_dir = root / "skills" / "brainstorming"
@@ -714,8 +711,13 @@ class SkillEvalContractTests(unittest.TestCase):
             (skill_dir / "SKILL.md").write_bytes(
                 b"skills/manage-specs/assets/\nextra behavior\n"
             )
-            self.assertNotEqual(
-                expected,
+            historical_tree = root / "historical"
+            historical_tree.mkdir()
+            (historical_tree / "SKILL.md").write_bytes(
+                b"skills/hello-scholar/manage-specs/assets/\nextra behavior\n"
+            )
+            self.assertEqual(
+                sha256_tree(historical_tree),
                 sha256_historical_skill_snapshot(root, source),
             )
 
@@ -960,6 +962,50 @@ class SkillEvalContractTests(unittest.TestCase):
         self.assertFalse(result.contract_valid)
         self.assertTrue(result.baseline_red)
         self.assertTrue(any("skillSnapshots.sample-skill.sha256" in e for e in result.errors))
+
+    def test_registered_historical_snapshot_requires_record_consistency_not_current_source(self) -> None:
+        temp, fixture = self.make_fixture(scenario_id="archived-formal-snapshot")
+        self.addCleanup(temp.cleanup)
+        fixture.approve()
+        fixture.add_baseline()
+        fixture.add_scorecard()
+        program_path = (
+            fixture.root
+            / "docs/specs/next_generation_skill/eval-program-v3.json"
+        )
+        program_path.parent.mkdir(parents=True)
+        ScenarioFixture._write_json(
+            program_path,
+            {
+                "programVersion": 1,
+                "batches": [
+                    {
+                        "protocolVersion": fixture.protocol_version,
+                        "scenarioIds": [fixture.scenario_id],
+                    },
+                ]
+            },
+        )
+        shutil.rmtree(fixture.skill_dir)
+
+        result = validate_scenario_dir(fixture.scenario_dir, fixture.root)
+
+        self.assertTrue(result.contract_valid, result.errors)
+        self.assertTrue(result.evaluation_passed, result.errors)
+
+        scorecard_path = fixture.scenario_dir / "scorecard.json"
+        scorecard = json.loads(scorecard_path.read_text(encoding="utf-8"))
+        scorecard["skillSnapshots"][fixture.primary_skill]["sha256"] = "f" * 64
+        ScenarioFixture._write_json(scorecard_path, scorecard)
+        mismatch = validate_scenario_dir(fixture.scenario_dir, fixture.root)
+        self.assertFalse(mismatch.contract_valid)
+        self.assertTrue(
+            any(
+                "does not match scorecard skill snapshot" in error
+                for error in mismatch.errors
+            ),
+            mismatch.errors,
+        )
 
     def test_approval_requires_reply_evidence_when_approved(self) -> None:
         temp, fixture = self.make_fixture()

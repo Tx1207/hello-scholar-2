@@ -64,25 +64,6 @@ function markdownLink(label, indexPath, targetPath) {
   return `[${escapeCell(label)}](${relativeLink(indexPath, targetPath)})`;
 }
 
-function stateCell(indexPath, state, document) {
-  // Purpose: render a document freshness cell; Input: Index path, state, and optional document; Output: linked or plain state text.
-  return document ? markdownLink(state, indexPath, document.relativePath) : state;
-}
-
-function completionCell(spec) {
-  // Purpose: render Tasks completion for one Spec; Input: normalized Spec summary; Output: percentage or missing marker.
-  if (!spec.tasks || !spec.completion) {
-    return "-";
-  }
-  const { completed, total, percent } = spec.completion;
-  return `${completed}/${total} (${percent}%)`;
-}
-
-function documentStatus(document) {
-  // Purpose: expose a document lifecycle status in navigation; Input: normalized document or null; Output: status or missing marker.
-  return document ? document.attributes.status : "-";
-}
-
 function table(header, rows) {
   // Purpose: render a complete deterministic Markdown table; Input: header cells and row cells; Output: Markdown table text.
   const separator = header.map(() => "---");
@@ -102,12 +83,6 @@ function renderGlobalIndex(specs) {
     escapeCell(spec.type),
     escapeCell(spec.status),
     escapeCell(spec.revision),
-    stateCell(indexPath, spec.planState, spec.plan),
-    escapeCell(documentStatus(spec.plan)),
-    stateCell(indexPath, spec.tasksState, spec.tasks),
-    escapeCell(spec.approvalState || "-"),
-    escapeCell(spec.tasksStatus || "-"),
-    completionCell(spec),
     escapeCell(spec.summary),
   ]);
   return [
@@ -115,7 +90,7 @@ function renderGlobalIndex(specs) {
     "# Specs",
     "",
     ...table(
-      ["Topic", "Spec", "Type", "Spec Status", "Revision", "Plan", "Plan Status", "Tasks", "Tasks Approval", "Tasks Status", "Completion", "Summary"],
+      ["Topic", "Spec", "Type", "Status", "Revision", "Summary"],
       rows
     ),
     "",
@@ -148,12 +123,6 @@ function renderTopicIndex(topic, specs, specsById) {
     escapeCell(spec.type),
     escapeCell(spec.status),
     escapeCell(spec.revision),
-    stateCell(indexPath, spec.planState, spec.plan),
-    escapeCell(documentStatus(spec.plan)),
-    stateCell(indexPath, spec.tasksState, spec.tasks),
-    escapeCell(spec.approvalState || "-"),
-    escapeCell(spec.tasksStatus || "-"),
-    completionCell(spec),
     escapeCell(spec.summary),
     relationCell(spec, indexPath, specsById),
   ]);
@@ -162,7 +131,7 @@ function renderTopicIndex(topic, specs, specsById) {
     `# Topic: ${topic}`,
     "",
     ...table(
-      ["Spec", "Type", "Spec Status", "Revision", "Plan", "Plan Status", "Tasks", "Tasks Approval", "Tasks Status", "Completion", "Summary", "Relations"],
+      ["Spec", "Type", "Status", "Revision", "Summary", "Relations"],
       rows
     ),
     "",

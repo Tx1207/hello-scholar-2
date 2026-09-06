@@ -14,7 +14,6 @@ from skill_eval_contract import (
     SONNET_EVAL_AGENT_MODEL,
     TERRA_EVAL_AGENT_MODEL,
     sha256_file,
-    sha256_historical_skill_snapshot,
     sha256_tree,
 )
 
@@ -105,7 +104,7 @@ LEGACY_V3_FIXTURE_DISCLOSURE_REVIEW = {
     ],
     "runtimeArtifactRule": "Fixture inputs reject __pycache__, .pyc, .pyo, .DS_Store, and .hello-scholar-install.json even where the deterministic tree hash ignores a runtime name.",
 }
-EXPECTED_V3_PRODUCT_SKILLS = (
+HISTORICAL_V3_PRODUCT_SKILLS = (
     ("using-helloscholar", "skills/using-helloscholar"),
     ("brainstorming", "skills/brainstorming"),
     ("manage-specs", "skills/manage-specs"),
@@ -120,6 +119,17 @@ EXPECTED_V3_PRODUCT_SKILLS = (
     ("crash-audit", "skills/crash-audit"),
     ("takeoff", "skills/takeoff"),
     ("landing", "skills/landing"),
+)
+EXPECTED_CURRENT_PRODUCT_SKILLS = (
+    ("converge-to-spec", "skills/converge-to-spec"),
+    ("crash-audit", "skills/crash-audit"),
+    ("docs-maintenance", "skills/docs-maintenance"),
+    ("grilling", "skills/grilling"),
+    ("handoff", "skills/handoff"),
+    ("landing", "skills/landing"),
+    ("manage-specs", "skills/manage-specs"),
+    ("record-experiment", "skills/record-experiment"),
+    ("takeoff", "skills/takeoff"),
 )
 EXPECTED_FORMAL_BASELINE_BATCH_IDS = (
     LEGACY_V3_BATCH_ID,
@@ -661,23 +671,30 @@ def _validate_fixture_disclosure_review(batch: dict) -> None:
 
 
 class EvalProposalBatchTests(unittest.TestCase):
-    def test_v3_program_declares_the_candidate_skill_portfolio(self) -> None:
+    def test_v3_program_preserves_the_historical_candidate_skill_portfolio(self) -> None:
         program = _load_v3_program()
         self.assertEqual(1, program.get("programVersion"))
         expected_skills = [
             {"name": name, "source": source}
-            for name, source in EXPECTED_V3_PRODUCT_SKILLS
+            for name, source in HISTORICAL_V3_PRODUCT_SKILLS
         ]
         self.assertEqual(expected_skills, program.get("activeProductSkills"))
         self.assertEqual(len(expected_skills), program.get("activeProductSkillCount"))
         self.assertEqual(42, program.get("productProposalCaseCount"))
         self.assertEqual(41, program.get("pendingProductProposalCaseCount"))
         self.assertEqual(2, program.get("minimumDistinctProjectsPerAcceptedSkill"))
-        for skill in expected_skills:
-            self.assertTrue(
-                (REPO_ROOT / skill["source"]).is_dir(),
-                skill["source"],
-            )
+
+    def test_current_product_skill_sources_are_exact_and_hashable(self) -> None:
+        expected_sources = dict(EXPECTED_CURRENT_PRODUCT_SKILLS)
+        actual_sources = {
+            path.name: path.relative_to(REPO_ROOT).as_posix()
+            for path in (REPO_ROOT / "skills").iterdir()
+            if path.is_dir() and (path / "SKILL.md").is_file()
+        }
+        self.assertEqual(expected_sources, actual_sources)
+        for name, source in expected_sources.items():
+            with self.subTest(skill=name):
+                self.assertRegex(sha256_tree(REPO_ROOT / source), r"^[0-9a-f]{64}$")
 
     def test_v3_program_assigns_all_and_only_current_formal_scenarios_to_baseline_batches(self) -> None:
         program = _load_v3_program()
@@ -686,7 +703,7 @@ class EvalProposalBatchTests(unittest.TestCase):
             list(EXPECTED_FORMAL_BASELINE_BATCH_IDS),
             [batch.get("batchId") for batch in batches],
         )
-        active_sources = dict(EXPECTED_V3_PRODUCT_SKILLS)
+        active_sources = dict(HISTORICAL_V3_PRODUCT_SKILLS)
         owners: dict[str, str] = {}
         product_cases: list[dict] = []
         historical_product_cases: list[dict] = []

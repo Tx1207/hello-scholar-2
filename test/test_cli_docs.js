@@ -58,26 +58,6 @@ function specText(overrides = {}) {
   ].join("\n");
 }
 
-function planText(specRevision = 1) {
-  // Purpose: build a valid Plan fixture document; Input: referenced Spec revision; Output: Markdown text with restricted Front Matter.
-  return [
-    "---",
-    "schema: 1",
-    "kind: plan",
-    "spec: SPEC-001",
-    `spec_revision: ${specRevision}`,
-    "revision: 1",
-    "status: approved",
-    "title: Paged Cache Plan",
-    "summary: Implement the design",
-    "created: 2026-08-01",
-    "updated: 2026-08-01",
-    "---",
-    "# Plan",
-    "",
-  ].join("\n");
-}
-
 function architectureText() {
   // Purpose: build a valid Architecture fixture document; Input: none; Output: Markdown text with restricted Front Matter.
   return [
@@ -173,28 +153,34 @@ test("check reports Missing, Current, and Stale generated Index states without w
       { path: "hello-scholar/specs/kv-cache/INDEX.md", state: "Current" },
     ]);
 
-    writeFile(projectRoot, `${bundle}/plan.md`, planText(0 + 1));
-    const withPlan = checkDocs({ projectRoot });
-    assert.deepEqual(withPlan.errors, []);
-    assert.ok(withPlan.indexStates.every((entry) => entry.state === "Stale"));
-    assert.equal(readFile(projectRoot, "hello-scholar/specs/INDEX.md").includes("[Current]"), false);
+    writeFile(projectRoot, `${bundle}/plan.md`, "malformed historical Plan\n");
+    writeFile(projectRoot, `${bundle}/tasks.md`, "---\ninvalid: [\n");
+    const withHistory = checkDocs({ projectRoot });
+    assert.deepEqual(withHistory.errors, []);
+    assert.ok(withHistory.notices.every((notice) => notice.code === "historical-document"));
+    assert.ok(withHistory.indexStates.every((entry) => entry.state === "Current"));
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }
 });
 
-test("Stale Plan and legacy paths remain notices and do not block sync", () => {
+test("historical Plan and Tasks remain notices and do not block or change sync", () => {
   const projectRoot = makeTempProject();
   try {
     const bundle = createSpecProject(projectRoot);
-    writeFile(projectRoot, `${bundle}/plan.md`, planText(1));
+    const planPath = writeFile(projectRoot, `${bundle}/plan.md`, "historical Plan without Front Matter\n");
+    const tasksPath = writeFile(projectRoot, `${bundle}/tasks.md`, "historical Tasks without Front Matter\n");
     syncDocs({ projectRoot });
     writeFile(projectRoot, `${bundle}/spec.md`, specText({ revision: 2, updated: "2026-08-02" }));
     writeFile(projectRoot, "hello-scholar/memory/specs/old.md", "# Legacy\n");
+    const historicalBefore = new Map([
+      [planPath, fs.readFileSync(planPath)],
+      [tasksPath, fs.readFileSync(tasksPath)],
+    ]);
 
     const checked = checkDocs({ projectRoot });
     assert.deepEqual(checked.errors, []);
-    assert.ok(checked.notices.some((notice) => notice.code === "plan-stale"));
+    assert.equal(checked.notices.filter((notice) => notice.code === "historical-document").length, 2);
     assert.ok(checked.notices.some((notice) => notice.code === "legacy-path"));
     assert.ok(checked.indexStates.every((entry) => entry.state === "Stale"));
 
@@ -202,6 +188,9 @@ test("Stale Plan and legacy paths remain notices and do not block sync", () => {
     assert.deepEqual(synced.errors, []);
     assert.equal(synced.writtenPaths.length, 2);
     assert.equal(readFile(projectRoot, "hello-scholar/memory/specs/old.md"), "# Legacy\n");
+    for (const [filePath, bytes] of historicalBefore) {
+      assert.deepEqual(fs.readFileSync(filePath), bytes);
+    }
   } finally {
     fs.rmSync(projectRoot, { recursive: true, force: true });
   }

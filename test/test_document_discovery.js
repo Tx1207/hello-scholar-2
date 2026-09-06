@@ -122,9 +122,7 @@ test("discovers only legal documents and reports non-core paths deterministicall
     const second = discoverDocuments(projectRoot);
     const expectedDocumentPaths = [
       "hello-scholar/architecture.md",
-      "hello-scholar/specs/alpha/SPEC-002-first/plan.md",
       "hello-scholar/specs/alpha/SPEC-002-first/spec.md",
-      "hello-scholar/specs/alpha/SPEC-002-first/tasks.md",
       "hello-scholar/specs/zeta/SPEC-010-later/spec.md",
       "runs/20260801-1200-eval/record.md",
     ];
@@ -133,9 +131,7 @@ test("discovers only legal documents and reports non-core paths deterministicall
     assert.deepEqual(relativeDocumentPaths(first), expectedDocumentPaths);
     assert.deepEqual(first.documents.map((document) => document.kind), [
       "architecture",
-      "plan",
       "spec",
-      "tasks",
       "spec",
       "record",
     ]);
@@ -146,10 +142,14 @@ test("discovers only legal documents and reports non-core paths deterministicall
     }
 
     assert.deepEqual(first.legacyPaths, ["hello-scholar/memory/specs/2025-legacy.md"]);
-    assert.deepEqual(first.misplacedPaths, [
-      "hello-scholar/runs/old-place/record.md",
+    assert.deepEqual(first.historicalPaths, [
+      "hello-scholar/specs/alpha/SPEC-002-first/plan.md",
+      "hello-scholar/specs/alpha/SPEC-002-first/tasks.md",
       "hello-scholar/specs/alpha/orphan/plan.md",
       "hello-scholar/specs/tasks.md",
+    ]);
+    assert.deepEqual(first.misplacedPaths, [
+      "hello-scholar/runs/old-place/record.md",
       "runs/20260801-1200-eval/nested/record.md",
     ]);
     assert.deepEqual(first.forbiddenRunDocuments, [
@@ -277,6 +277,7 @@ test("prunes external artifact links but rejects linked runs roots and run direc
     const prunedResult = discoverDocuments(projectRoot);
     assert.deepEqual(relativeDocumentPaths(prunedResult), ["runs/local-run/record.md"]);
     assert.deepEqual(prunedResult.misplacedPaths, []);
+    assert.deepEqual(prunedResult.historicalPaths, []);
     assert.deepEqual(prunedResult.forbiddenRunDocuments, []);
     assert.deepEqual(prunedResult.unsafePaths, []);
 
@@ -329,12 +330,47 @@ test("an empty project remains empty", () => {
     assert.deepEqual(discoverDocuments(projectRoot), {
       documents: [],
       legacyPaths: [],
+      historicalPaths: [],
       misplacedPaths: [],
       forbiddenRunDocuments: [],
       unsafePaths: [],
       indexPaths: [],
     });
     assert.deepEqual(fs.readdirSync(projectRoot), []);
+  } finally {
+    removeDirectories(projectRoot);
+  }
+});
+
+test("discovers malformed Plan and Tasks files as unread historical material", () => {
+  const projectRoot = makeTempDirectory("hello-scholar-history-");
+  try {
+    const planPath = writeFile(
+      projectRoot,
+      "hello-scholar/specs/topic/SPEC-001-example/plan.md",
+      "malformed historical plan\n"
+    );
+    const tasksPath = writeFile(
+      projectRoot,
+      "hello-scholar/specs/topic/SPEC-001-example/tasks.md",
+      "---\ninvalid: [\n"
+    );
+    const before = new Map([
+      [planPath, fs.readFileSync(planPath)],
+      [tasksPath, fs.readFileSync(tasksPath)],
+    ]);
+
+    const result = discoverDocuments(projectRoot);
+
+    assert.deepEqual(result.documents, []);
+    assert.deepEqual(result.historicalPaths, [
+      "hello-scholar/specs/topic/SPEC-001-example/plan.md",
+      "hello-scholar/specs/topic/SPEC-001-example/tasks.md",
+    ]);
+    assert.deepEqual(result.misplacedPaths, []);
+    for (const [filePath, bytes] of before) {
+      assert.deepEqual(fs.readFileSync(filePath), bytes);
+    }
   } finally {
     removeDirectories(projectRoot);
   }

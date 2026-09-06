@@ -14,7 +14,7 @@ function blockRegex(tool) {
   const begin = beginMarker(tool).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const end = endMarker(tool).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const lineBreak = "\\r?\\n";
-  return new RegExp(`${begin}${lineBreak}[\\s\\S]*?${lineBreak}${end}(?:${lineBreak})*`);
+  return new RegExp(`${begin}${lineBreak}[\\s\\S]*?${lineBreak}${end}`);
 }
 
 function hasInstructionBlock(existingText, tool) {
@@ -22,12 +22,11 @@ function hasInstructionBlock(existingText, tool) {
 }
 
 function upsertInstructionBlock(existingText, tool, blockContent) {
-  const block = `${wrapBlock(tool, blockContent)}\n\n`;
   const regex = blockRegex(tool);
   if (regex.test(existingText)) {
-    return existingText.replace(regex, block);
+    return existingText.replace(regex, wrapBlock(tool, blockContent));
   }
-  return `${block}${existingText}`;
+  return `${wrapBlock(tool, blockContent)}\n\n${existingText}`;
 }
 
 function removeInstructionBlock(existingText, tool) {

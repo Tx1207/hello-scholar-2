@@ -60,6 +60,9 @@ FROZEN_PROTOCOL_VERSIONS = {1, 2}
 FROZEN_HISTORY_ROOT_COUNTS = {1: 1, 2: 37}
 FROZEN_HISTORY_MANIFEST_PATH = "test/skill-evals/frozen-history-v1-v2.json"
 FROZEN_HISTORY_MANIFEST_SHA256 = "714ec7c0af7a030e8f2d33af856d7db0c59de63782822a72afd5c02781448c12"
+HISTORICAL_FORMAL_PROGRAM_PATH = (
+    "docs/specs/next_generation_skill/eval-program-v3.json"
+)
 PERSISTED_SELECTOR_KEYS = {
     "dispatchSelector",
     "modelSelector",
@@ -455,6 +458,46 @@ def _load_json(path: Path, errors: list[str], label: str) -> dict[str, Any] | No
         errors.append(f"{label}: expected a JSON object")
         return None
     return value
+
+
+def _historical_formal_scenario_ids(repo_root: Path) -> frozenset[str]:
+    """Purpose: identify v3/v4 scenarios owned by the archived Eval program; Input: repository root; Output: registered Scenario IDs or an empty set when the optional archive registry is unavailable; Boundary: registration permits saved-record consistency checks but does not prove retired Skill source bytes can be reconstructed; Side effects: reads the historical program registry."""
+    errors: list[str] = []
+    program = _load_json(
+        repo_root / HISTORICAL_FORMAL_PROGRAM_PATH,
+        errors,
+        "historicalFormalProgram",
+    )
+    if program is None:
+        return frozenset()
+    if program.get("programVersion") != 1:
+        return frozenset()
+    batches = program.get("batches")
+    if not isinstance(batches, list):
+        return frozenset()
+    scenario_ids: set[str] = set()
+    for batch in batches:
+        if not isinstance(batch, dict) or batch.get("protocolVersion") not in {3, 4}:
+            return frozenset()
+        values = batch.get("scenarioIds")
+        if not isinstance(values, list) or not all(
+            isinstance(value, str) and value for value in values
+        ):
+            return frozenset()
+        scenario_ids.update(values)
+    return frozenset(scenario_ids)
+
+
+def _uses_historical_formal_snapshots(
+    scenario_dir: Path,
+    repo_root: Path,
+    historical_scenario_ids: frozenset[str],
+) -> bool:
+    """Purpose: separate archived v3/v4 saved bindings from current Skill validation; Input: Scenario path, repository root, and archived IDs; Output: true only for a registered repository Eval root; Boundary: true means validate record consistency, not historical source availability."""
+    return (
+        scenario_dir.parent == (repo_root / "test" / "skill-evals").resolve()
+        and scenario_dir.name in historical_scenario_ids
+    )
 
 
 def _nonempty_string(value: Any) -> bool:
@@ -1675,8 +1718,9 @@ def _validate_live_approval(
     errors: list[str],
     *,
     require_approved: bool,
+    historical_skill_snapshots: bool,
 ) -> bool:
-    """Purpose: validate a v3 Live authorization against the current Red Baseline and Skill snapshots; Input: Scenario contracts, Live approval, optional Scorecard, and error sink; Output: true when an approved authorization is current; Side effects: reads the Baseline and current Skill trees."""
+    """Purpose: validate a v3/v4 Live authorization against its Red Baseline and Skill snapshots; Input: Scenario contracts, archive mode, optional Scorecard, and error sink; Output: true when an approved authorization is valid; Side effects: reads the Baseline and, for current records, Skill trees."""
     if not _nonempty_string(live_approval.get("liveApprovalId")):
         errors.append("liveApproval.liveApprovalId: expected non-empty string")
     batch_id = live_approval.get("liveAuthorizationBatchId")
@@ -1760,14 +1804,25 @@ def _validate_live_approval(
             expected_status = expectations.get(skill, {}).get("liveLoad")
             if snapshot.get("status") != expected_status:
                 errors.append(f"{field}.status: does not match protocol liveLoad")
-            source = sources.get(skill)
-            try:
-                expected_hash = sha256_historical_skill_snapshot(repo_root, source)
-            except (ContractError, TypeError) as error:
-                errors.append(f"{field}.sha256: cannot hash current skill: {error}")
+            if historical_skill_snapshots:
+                # The retired source bytes are not present on this branch. Preserve the
+                # recorded identifier and cross-record binding without claiming a rehash.
+                snapshot_hash = snapshot.get("sha256")
+                if not isinstance(snapshot_hash, str) or not HEX_SHA256.fullmatch(
+                    snapshot_hash
+                ):
+                    errors.append(
+                        f"{field}.sha256: historical snapshot requires SHA-256"
+                    )
             else:
-                if snapshot.get("sha256") != expected_hash:
-                    errors.append(f"{field}.sha256: does not match current skill")
+                source = sources.get(skill)
+                try:
+                    expected_hash = sha256_historical_skill_snapshot(repo_root, source)
+                except (ContractError, TypeError) as error:
+                    errors.append(f"{field}.sha256: cannot hash current skill: {error}")
+                else:
+                    if snapshot.get("sha256") != expected_hash:
+                        errors.append(f"{field}.sha256: does not match current skill")
             if isinstance(scorecard_snapshots, dict) and snapshot != scorecard_snapshots.get(
                 skill
             ):
@@ -1786,6 +1841,8 @@ def _validate_scorecard(
     user_value_rubric: dict[str, Any] | None,
     original_request: str | None,
     errors: list[str],
+    *,
+    historical_skill_snapshots: bool,
 ) -> tuple[bool, bool]:
     """Purpose: validate a saved Live Eval scorecard; Input: scenario, scorecard, contracts, repository root, shared rubric, original request, and error sink; Output: observed-pass and user-accepted flags; Side effects: reads Skills/evidence and appends diagnostics."""
     _validate_hash_bindings(scorecard, current_hashes, "scorecard", errors)
@@ -1811,13 +1868,15 @@ def _validate_scorecard(
             )
             if snapshot.get("status") != expected_status:
                 errors.append(f"{field}.status: does not match protocol liveLoad")
-            if frozen_history:
+            if frozen_history or historical_skill_snapshots:
+                # v1/v2 tree integrity is proven separately by its pinned manifest. For
+                # registered v3/v4 history, this only validates the saved identifier.
                 snapshot_hash = snapshot.get("sha256")
                 if not isinstance(snapshot_hash, str) or not HEX_SHA256.fullmatch(
                     snapshot_hash
                 ):
                     errors.append(
-                        f"{field}.sha256: frozen historical snapshot requires SHA-256"
+                        f"{field}.sha256: historical snapshot requires SHA-256"
                     )
             else:
                 source = sources.get(skill)
@@ -1901,8 +1960,9 @@ def _validate_scenario_dir(
     repo_root: str | Path | None = None,
     *,
     frozen_history: FrozenHistoryReport | None = None,
+    historical_scenario_ids: frozenset[str] | None = None,
 ) -> ScenarioResult:
-    """Purpose: validate one saved Eval scenario with an internal optional archive report; Input: scenario directory, optional repository root, and trusted shared report; Output: independent ScenarioResult stage facts; Side effects: reads Proposal and evidence files."""
+    """Purpose: validate one saved Eval scenario with optional shared archive registries; Input: scenario directory, repository root, and trusted archive facts; Output: independent ScenarioResult stage facts; Side effects: reads Proposal and evidence files."""
 
     directory = Path(scenario_dir).resolve()
     repository = Path(repo_root).resolve() if repo_root is not None else directory.parents[2]
@@ -1912,6 +1972,16 @@ def _validate_scenario_dir(
     baseline_errors: list[str] = []
     live_approval_errors: list[str] = []
     scorecard_errors: list[str] = []
+    historical_scenario_ids = (
+        historical_scenario_ids
+        if historical_scenario_ids is not None
+        else _historical_formal_scenario_ids(repository)
+    )
+    historical_skill_snapshots = _uses_historical_formal_snapshots(
+        directory,
+        repository,
+        historical_scenario_ids,
+    )
 
     protocol = _load_json(directory / "protocol.json", protocol_errors, "protocol")
     user_value_rubric: dict[str, Any] | None = None
@@ -2022,6 +2092,7 @@ def _validate_scenario_dir(
                 None,
                 live_approval_errors,
                 require_approved=False,
+                historical_skill_snapshots=historical_skill_snapshots,
             )
 
     scorecard: dict[str, Any] | None = None
@@ -2053,6 +2124,7 @@ def _validate_scenario_dir(
                         scorecard,
                         scorecard_errors,
                         require_approved=True,
+                        historical_skill_snapshots=historical_skill_snapshots,
                     )
             scorecard_result_passed, scorecard_user_accepted = _validate_scorecard(
                 directory,
@@ -2064,6 +2136,7 @@ def _validate_scenario_dir(
                 user_value_rubric,
                 original_request,
                 scorecard_errors,
+                historical_skill_snapshots=historical_skill_snapshots,
             )
 
     errors.extend(protocol_errors)
@@ -2123,8 +2196,14 @@ def validate_all_scenarios(
     )
     repository = Path(repo_root).resolve() if repo_root is not None else root.parents[1]
     frozen_history = validate_frozen_history(repository)
+    historical_scenario_ids = _historical_formal_scenario_ids(repository)
     results = [
-        _validate_scenario_dir(path, repository, frozen_history=frozen_history)
+        _validate_scenario_dir(
+            path,
+            repository,
+            frozen_history=frozen_history,
+            historical_scenario_ids=historical_scenario_ids,
+        )
         for path in directories
     ]
     scenario_owners: dict[str, list[int]] = {}

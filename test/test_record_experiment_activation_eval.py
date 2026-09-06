@@ -11,6 +11,7 @@ import re
 import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
 from skill_eval_contract import sha256_file, sha256_tree
 
@@ -502,10 +503,23 @@ class RecordExperimentActivationEvalTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temp_name:
             temp_root = Path(temp_name)
+            source_root = temp_root / "catalog-source"
             plugin_dir = temp_root / "plugin"
             workspace = temp_root / "fixture"
             settings_path = temp_root / "settings.json"
-            snapshots = module.assemble_plugin(plugin_dir, protocol)
+            for skill_name in protocol["catalogSkills"]:
+                source = source_root / protocol["skillSources"][skill_name]
+                source.mkdir(parents=True)
+                (source / "SKILL.md").write_text(
+                    "---\n"
+                    f"name: {skill_name}\n"
+                    f"description: Isolated {skill_name} assembly fixture.\n"
+                    "---\n\n"
+                    f"# {skill_name}\n",
+                    encoding="utf-8",
+                )
+            with mock.patch.object(module, "REPO_ROOT", source_root):
+                snapshots = module.assemble_plugin(plugin_dir, protocol)
             module.write_probe_settings(
                 settings_path,
                 protocol,
@@ -529,6 +543,11 @@ class RecordExperimentActivationEvalTests(unittest.TestCase):
             )
             self.assertEqual(0, completed.returncode, completed.stdout + completed.stderr)
             self.assertEqual(set(protocol["catalogSkills"]), set(snapshots))
+            for skill_name, snapshot in snapshots.items():
+                source = source_root / protocol["skillSources"][skill_name]
+                target = plugin_dir / "skills" / skill_name
+                self.assertEqual(sha256_tree(source), snapshot)
+                self.assertEqual(sha256_tree(source), sha256_tree(target))
 
         self.assertTrue(
             module.invoked_record_experiment(
