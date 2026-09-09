@@ -61,6 +61,7 @@
 
 - 根据用户目标和项目事实直接工作。设计、接口、不变量或验收标准需要长期保存时使用 Spec；普通小改动不强制建文档。
 - 使用 hello-scholar 文档时，Spec 位于 `hello-scholar/specs/<topic>/SPEC-NNN-<name>/spec.md`；已实现且已采用的架构事实位于 `hello-scholar/architecture.md`；正式实验 Record 位于 `runs/<run-id>/record.md`；Handoff 位于 `hello-scholar/handoffs/`。
+- 查询任务状态或结果，先查 Run Record；查询设计或验收进度，先查 Spec；查询当前结构或职责，先查 Architecture。已知路径直接读取，否则利用已有 Index 或定向搜索文档。Index 仅用于导航；依据源文档及相关证据核实结论，证据不足时再扩大检查范围。查询保持只读。
 - 更新受影响的现有事实，不创建竞争事实源。不为匹配默认路径迁移已有项目文档；创建新来源前先确定归属。
 - 临时步骤不需要 `plan.md` 或 `tasks.md`，不创建或审批这些文件作为新的 hello-scholar 流程门禁。保留历史文件，迁移时核对其中独有约束。
 - `hello-scholar docs check` 只读。`hello-scholar docs sync` 负责生成的 Index，会写文件：仅在 CLI 可用且相关写入属于用户授权范围时运行。不为满足此约定自行安装工具或扩大范围。
